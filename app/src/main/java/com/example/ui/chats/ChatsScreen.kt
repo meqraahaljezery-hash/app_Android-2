@@ -21,6 +21,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import com.example.data.model.*
 import com.example.i18n.AppLanguage
 import com.example.ui.theme.TelegramBlue
@@ -861,7 +865,17 @@ fun ChatsScreen(
                             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                             shape = RoundedCornerShape(14.dp)
                         ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
+                            Column {
+                                Image(
+                                    painter = painterResource(id = R.drawable.img_halaqah_study),
+                                    contentDescription = group.nameAr,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(90.dp)
+                                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Column(modifier = Modifier.padding(14.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -950,6 +964,7 @@ fun ChatsScreen(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }

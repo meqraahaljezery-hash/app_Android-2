@@ -1,0 +1,60 @@
+name: Android CI Build
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # يسمح بتشغيله يدوياً من صفحة Actions
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. سحب الكود من المستودع
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. إعداد بيئة Java (الإصدار 17 مطلوب لإصدارات Android Gradle الحديثة)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 3. إعداد Gradle مع تفعيل التخزين المؤقت (Caching) لتسريع البناء
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 4. منح صلاحية التنفيذ لملف gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 5. (اختياري) إنشاء ملف .env من الأسرار إذا كان مشروعك يعتمد عليه
+      # يمكنك إضافة المتغيرات في Settings > Secrets and variables > Actions
+      - name: Create .env file (if needed)
+        run: |
+          if [ -f ".env.example" ]; then
+            cp .env.example .env
+          fi
+          # يمكنك هنا إضافة أسطر لإضافة مفاتيح سرية إلى ملف .env
+          # echo "API_KEY=${{ secrets.API_KEY }}" >> .env
+
+      # 6. (اختياري) إنشاء ملف google-services.json إذا كنت تستخدم Firebase
+      # قم برفع محتوى الملف كـ Secret باسم GOOGLE_SERVICES_JSON
+      # - name: Decode google-services.json
+      #   run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
+
+      # 7. بناء ملف APK (نسخة Debug)
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      # 8. رفع ملف APK الناتج كمخرجات (Artifact) لتحميله
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 7

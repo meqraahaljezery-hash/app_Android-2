@@ -1,3 +1,5 @@
+package com.example.ui.packages
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context

@@ -38,7 +38,7 @@ class MaqraahViewModel : ViewModel() {
                 featuresAr = listOf("تسميع فردي وتصحيح مباشر", "متابعة أسبوعية في المتون", "شهادة إتمام مستوى"),
                 badgeTag = "تأسيسي وإتقان",
                 isOpenForRegistration = true,
-                enrolledCount = 64
+                enrolledCount = 0
             ),
             Program(
                 id = "prog_hifz",
@@ -55,7 +55,7 @@ class MaqraahViewModel : ViewModel() {
                 featuresAr = listOf("خطة حفظ يومية محكمة", "مراجعة 5 أجزاء أسبوعياً", "اختبارات إتقان دورية"),
                 badgeTag = "حفظ وإتقان",
                 isOpenForRegistration = true,
-                enrolledCount = 52
+                enrolledCount = 0
             ),
             Program(
                 id = "prog_hafs",
@@ -72,7 +72,7 @@ class MaqraahViewModel : ViewModel() {
                 featuresAr = listOf("سند متصل معتمد", "مجلس ختم رسمي", "وثيقة إجازة مصدقة"),
                 badgeTag = "إجازة بالسند المتصل",
                 isOpenForRegistration = true,
-                enrolledCount = 38
+                enrolledCount = 0
             ),
             Program(
                 id = "prog_qiraat",
@@ -89,7 +89,7 @@ class MaqraahViewModel : ViewModel() {
                 featuresAr = listOf("جمع القراءات بطريقة الإفراد والجمع", "تحريرات الشاطبية", "إجازة مسندة كبرى"),
                 badgeTag = "عالي الإسناد (تخصص)",
                 isOpenForRegistration = true,
-                enrolledCount = 19
+                enrolledCount = 0
             )
         )
     )
@@ -132,75 +132,16 @@ class MaqraahViewModel : ViewModel() {
     private val _creditLedger = MutableStateFlow<List<MinuteLedgerEntry>>(emptyList())
     val creditLedger: StateFlow<List<MinuteLedgerEntry>> = _creditLedger.asStateFlow()
 
-    // 9. Announcements
-    private val _announcements = MutableStateFlow(
-        listOf(
-            Announcement(
-                id = "anc_1",
-                title = "افتتاح التسجيل في دورة الإجازة بالسند المتصل برواية حفص",
-                content = "تعلن إدارة مقرأة الإمام الجزري عن فتح باب التسجيل للطلاب المتقنين للمتون وأحكام التجويد للالتحاق ببرنامج الإجازة بالسند المتصل. المقاعد محدودة لضمان المشافهة الفردية الدقيقة.",
-                date = "2026-10-30",
-                isPinned = true,
-                author = "المشرف العام (خالد أحمد مصطفى)"
-            ),
-            Announcement(
-                id = "anc_2",
-                title = "تحديث أوقات الحلقات الصباحية والمسائية",
-                content = "نلفت عناية الإخوة والأخوات إلى تعديل مواعيد الحلقات الصباحية لتبدأ مباشرة بعد صلاة الفجر بتوقيت مكة المكرمة (+3). نرجو من الجميع التواجد قبل الوقت المحدد بـ 5 دقائق.",
-                date = "2026-10-26",
-                isPinned = false,
-                author = "إدارة المقرأة"
-            )
-        )
-    )
+    // 9. Announcements (Starts clean for real admin posts)
+    private val _announcements = MutableStateFlow<List<Announcement>>(emptyList())
     val announcements: StateFlow<List<Announcement>> = _announcements.asStateFlow()
 
-    // 10. Quran Posts
-    private val _quranPosts = MutableStateFlow(
-        listOf(
-            QuranPost(
-                id = "post_1",
-                authorName = "الشيخ د. إبراهيم أحمد الجزري",
-                authorRole = "رئيس هيئة الإقراء",
-                content = "قال الإمام ابن الجزري رحمه الله:\n«والأخذ بالتجويد حتم لازمُ ** من لم يصحح القرآن آثمُ\nلأنه به الإله أنزلا ** وهكذا منه إلينا وصلا»\nالتجويد ليس حلية زائدة بل هو صيانة لكتاب الله عن اللحن والتحريف.",
-                date = "منذ ساعتين",
-                likesCount = 38,
-                commentsCount = 7
-            ),
-            QuranPost(
-                id = "post_2",
-                authorName = "المقرئ عبد الله محمد النور",
-                authorRole = "معلم التلقين والتجويد",
-                content = "فائدة تجويدية: عند النطق بحرف الضاد احرص على إخراج الحرف من إحدى حافتي اللسان أو كلتيهما مع الأضراس العليا، مع مراعاة صفة الاستطالة، وتجنب خلطها بالظاء المشالة.",
-                date = "منذ يوم",
-                likesCount = 29,
-                commentsCount = 4
-            )
-        )
-    )
+    // 10. Quran Posts (Starts clean for real posts)
+    private val _quranPosts = MutableStateFlow<List<QuranPost>>(emptyList())
     val quranPosts: StateFlow<List<QuranPost>> = _quranPosts.asStateFlow()
 
-    // 11. Notifications
-    private val _notifications = MutableStateFlow(
-        listOf(
-            AppNotification(
-                id = "notif_1",
-                title = "تم قبول طلب التسجيل في برنامج حفص",
-                message = "مبارك! تم اعتماد طلبك للالتحاق ببرنامج الإجازة برواية حفص عن عاصم. يمكنك الآن دخول حلقة الإمام الشاطبي الصباحية.",
-                date = "2026-10-28 11:00",
-                type = "ENROLLMENT",
-                isRead = false
-            ),
-            AppNotification(
-                id = "notif_2",
-                title = "تمت إضافة 200 دقيقة إلى رصيدك",
-                message = "تم اعتماد إشعار التحويل البنكي وإضافة 200 دقيقة بنجاح. رصيدك الحالي أصبح 280 دقيقة.",
-                date = "2026-10-25 14:30",
-                type = "RECHARGE",
-                isRead = true
-            )
-        )
-    )
+    // 11. Notifications (Starts clean for real user events)
+    private val _notifications = MutableStateFlow<List<AppNotification>>(emptyList())
     val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
     // 12. Groups (The 7 Specific Groups: 6 Gender x Time Slot + 1 General Forum)
@@ -396,7 +337,13 @@ class MaqraahViewModel : ViewModel() {
                 clean == "admin@aljazari.org"
     }
 
-    fun signInWithGoogle(email: String, name: String) {
+    fun registerOrSignInStudent(
+        email: String,
+        name: String,
+        phone: String = "",
+        gender: String = "ذكر",
+        targetProgram: String = "حلقات التلقين وتصحيح الأداء"
+    ) {
         val cleanEmail = email.trim().lowercase()
         val isAdmin = isAdminEmail(cleanEmail)
         val role = if (isAdmin) UserRole.ADMIN else UserRole.STUDENT
@@ -412,21 +359,62 @@ class MaqraahViewModel : ViewModel() {
             email = email.trim(),
             role = role,
             studentCode = if (isAdmin) "ADM-001" else "JZR-${(1000..9999).random()}",
-            phone = if (isAdmin) "+251 990 161 372" else "+251 912 000 000",
+            phone = if (phone.isNotBlank()) phone.trim() else (if (isAdmin) "+251 990 161 372" else "+251 912 000 000"),
+            gender = gender,
             minuteBalance = if (isAdmin) 1000 else 60,
-            tajweedLevel = if (isAdmin) "مقرئ مسند بالقراءات العشر" else "مبتدئ في حلقات التلقين",
-            sanadTrack = if (isAdmin) "إشراف هيئة الإقراء والسند" else "مسار تصحيح الأداء والتلقين",
-            bio = if (isAdmin) "الحساب الإداري الرسمي لمقرأة الإمام الجزري للإقراء والإجازة بالسند المتصل" else "طالب علم يبتغي ضبط القرآن الكريم ونيل الإجازة بالسند"
+            tajweedLevel = if (isAdmin) "مقرئ مسند بالقراءات العشر" else "طالب مسجل جديد",
+            sanadTrack = if (isAdmin) "إشراف هيئة الإقراء والسند" else targetProgram,
+            bio = if (isAdmin) "الحساب الإداري الرسمي لمقرأة الإمام الجزري للإقراء والإجازة بالسند المتصل" else "طالب علم في $targetProgram"
         )
         _currentUser.value = user
         _isOnboardingCompleted.value = true
 
         if (role == UserRole.STUDENT) {
-            val exists = _students.value.any { it.email.equals(user.email, ignoreCase = true) }
-            if (!exists) {
-                _students.value = _students.value + user
+            // إضافة الطالب تلقائياً وبشكل فوري لقائمة المدير
+            val existingIndex = _students.value.indexOfFirst { it.email.equals(user.email, ignoreCase = true) }
+            if (existingIndex >= 0) {
+                val updated = _students.value.toMutableList()
+                updated[existingIndex] = user
+                _students.value = updated
+            } else {
+                _students.value = listOf(user) + _students.value
             }
+
+            // إنشاء طلب تسجيل فوري في قائمة طلبات المدير
+            val enrollmentReq = EnrollmentRequest(
+                id = "enr_${UUID.randomUUID().toString().take(6)}",
+                studentId = user.id,
+                studentName = user.name,
+                studentCode = user.studentCode,
+                programId = "prog_auto",
+                programTitle = targetProgram,
+                age = 22,
+                gender = gender,
+                city = "مسجل عبر الاستمارة",
+                contactPhone = user.phone,
+                currentMemorization = "مسجل جديد",
+                previousExperience = "تم التسجيل عبر استمارة المقرأة",
+                preferredTimeSlot = "حسب توفر الحلقات",
+                status = "PENDING",
+                submittedAt = dateFormat.format(Date())
+            )
+            _enrollmentRequests.value = listOf(enrollmentReq) + _enrollmentRequests.value
+
+            // إشعار فوري
+            val notif = AppNotification(
+                id = "notif_${System.currentTimeMillis()}",
+                title = "تم استلام استمارة التسجيل",
+                message = "أهلاً بك يا ${user.name} في مقرأة الإمام الجزري، تم إرسال ملفك للإدارة العامة للمراجعة والاعتماد.",
+                date = dateFormat.format(Date()),
+                type = "REGISTRATION",
+                isRead = false
+            )
+            _notifications.value = listOf(notif) + _notifications.value
         }
+    }
+
+    fun signInWithGoogle(email: String, name: String) {
+        registerOrSignInStudent(email, name)
     }
 
     fun signOut() {

@@ -50,29 +50,21 @@ jobs:
             fi
           fi
 
-          # 3. توفير ملف debug.keystore وضمان وجوده دائماً
-          if [ -n "$RAW_DEBUG_KEYSTORE" ]; then
-            echo "$RAW_DEBUG_KEYSTORE" | base64 -d > debug.keystore 2>/dev/null || true
+          # 3. تثبيت وفك نفس مفتاح التوقيع الثابت debug.keystore.base64 بدقة تامة
+          if [ -f "debug.keystore.base64" ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+            echo "✓ debug.keystore restored from project repository"
+          elif [ -n "$RAW_DEBUG_KEYSTORE" ]; then
+            echo "$RAW_DEBUG_KEYSTORE" | base64 -d > debug.keystore
+            echo "✓ debug.keystore restored from secret"
           fi
 
-          if [ ! -f "debug.keystore" ] && [ -f "debug.keystore.base64" ]; then
-            base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
+          # التحقق من بصمات المفتاح للتأكيد وضمان ثباتها الدائم
+          if [ -f "debug.keystore" ]; then
+            echo "=== Active Keystore Fingerprints ==="
+            keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | grep -E "SHA1|SHA256" || true
           fi
 
-          # إذا لم يتوفر ملف debug.keystore، يتم توليده فوراً عبر keytool بالمواصفات القياسية
-          if [ ! -f "debug.keystore" ]; then
-            echo "Generating fresh debug.keystore..."
-            keytool -genkey -v -keystore debug.keystore \
-              -alias androiddebugkey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass android \
-              -keypass android \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
-
-          echo "✓ debug.keystore verified at: $(pwd)/debug.keystore"
           chmod +x gradlew || true
 
       - name: Build Debug APK

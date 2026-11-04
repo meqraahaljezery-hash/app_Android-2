@@ -26,22 +26,35 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Setup Secrets and Environment Files
+        env:
+          RAW_GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          RAW_DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+          RAW_GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RAW_APPCHECK_TOKEN: ${{ secrets.FIREBASE_APPCHECK_DEBUG_TOKEN }}
         run: |
           # 1. إنشاء ملف .env للمفاتيح
           touch .env
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
-          echo "FIREBASE_APPCHECK_DEBUG_TOKEN=${{ secrets.FIREBASE_APPCHECK_DEBUG_TOKEN }}" >> .env
+          echo "GEMINI_API_KEY=${RAW_GEMINI_KEY}" >> .env
+          echo "FIREBASE_APPCHECK_DEBUG_TOKEN=${RAW_APPCHECK_TOKEN}" >> .env
 
-          # 2. فك ملف google-services.json إن وجد في secrets
-          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
-            echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > app/google-services.json
+          # 2. كتابة ملف google-services.json والتحقق من صحته كـ JSON سليم
+          if [ -n "$RAW_GOOGLE_SERVICES" ]; then
+            printf "%s\n" "$RAW_GOOGLE_SERVICES" > app/google-services.json
+            
+            # التحقق هل هو json سليم أم لا بواسطة python
+            if python3 -m json.tool app/google-services.json > /dev/null 2>&1; then
+              echo "✓ google-services.json is valid JSON"
+            else
+              echo "⚠ Warning: GOOGLE_SERVICES_JSON from secret is not valid JSON! Removing corrupted file to prevent build failure..."
+              rm -f app/google-services.json
+            fi
           fi
 
           # 3. مفتاح التوقيع إن وُجد كـ secret أو كملف base64
-          if [ -n "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > debug.keystore
+          if [ -n "$RAW_DEBUG_KEYSTORE" ]; then
+            echo "$RAW_DEBUG_KEYSTORE" | base64 -d > debug.keystore 2>/dev/null || true
           elif [ -f "debug.keystore.base64" ]; then
-            base64 -d debug.keystore.base64 > debug.keystore || true
+            base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
           fi
 
           chmod +x gradlew || true

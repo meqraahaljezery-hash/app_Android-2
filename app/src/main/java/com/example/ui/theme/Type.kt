@@ -2,30 +2,55 @@ package com.example.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.R
+
+// Uthmanic Hafs Font Family bundled locally in res/font/
+val UthmanicHafsFontFamily = FontFamily(
+    Font(R.font.uthmanic_hafs, FontWeight.Normal),
+    Font(R.font.uthmanic_hafs, FontWeight.Bold)
+)
+
+// Specialized Typography style for Quranic Verses, Ayaat, and Surah Titles
+val QuranicTextStyle = TextStyle(
+    fontFamily = UthmanicHafsFontFamily,
+    fontWeight = FontWeight.Normal,
+    fontSize = 24.sp,
+    lineHeight = 44.sp,
+    letterSpacing = 0.sp
+)
+
+val QuranicHeadlineStyle = TextStyle(
+    fontFamily = UthmanicHafsFontFamily,
+    fontWeight = FontWeight.Bold,
+    fontSize = 28.sp,
+    lineHeight = 48.sp,
+    letterSpacing = 0.sp
+)
 
 val Typography = Typography(
     headlineLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = UthmanicHafsFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
-        lineHeight = 36.sp,
+        lineHeight = 42.sp,
         letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = UthmanicHafsFontFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
+        fontSize = 23.sp,
+        lineHeight = 36.sp,
         letterSpacing = 0.sp
     ),
     titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = UthmanicHafsFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 19.sp,
-        lineHeight = 26.sp,
+        fontSize = 20.sp,
+        lineHeight = 30.sp,
         letterSpacing = 0.sp
     ),
     titleMedium = TextStyle(

@@ -45,18 +45,34 @@ jobs:
             if python3 -m json.tool app/google-services.json > /dev/null 2>&1; then
               echo "✓ google-services.json is valid JSON"
             else
-              echo "⚠ Warning: GOOGLE_SERVICES_JSON from secret is not valid JSON! Removing corrupted file to prevent build failure..."
+              echo "⚠ Warning: GOOGLE_SERVICES_JSON is not valid JSON! Removing to prevent build failure..."
               rm -f app/google-services.json
             fi
           fi
 
-          # 3. مفتاح التوقيع إن وُجد كـ secret أو كملف base64
+          # 3. توفير ملف debug.keystore وضمان وجوده دائماً
           if [ -n "$RAW_DEBUG_KEYSTORE" ]; then
             echo "$RAW_DEBUG_KEYSTORE" | base64 -d > debug.keystore 2>/dev/null || true
-          elif [ -f "debug.keystore.base64" ]; then
+          fi
+
+          if [ ! -f "debug.keystore" ] && [ -f "debug.keystore.base64" ]; then
             base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
           fi
 
+          # إذا لم يتوفر ملف debug.keystore، يتم توليده فوراً عبر keytool بالمواصفات القياسية
+          if [ ! -f "debug.keystore" ]; then
+            echo "Generating fresh debug.keystore..."
+            keytool -genkey -v -keystore debug.keystore \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+          echo "✓ debug.keystore verified at: $(pwd)/debug.keystore"
           chmod +x gradlew || true
 
       - name: Build Debug APK

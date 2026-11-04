@@ -1,0 +1,6 @@
+{
+  "name": "Imam Al-Jazari Maqraah",
+  "description": "مقرأة الإمام الجزري للإقراء والإجازة بالسند - Quranic Recitation and Ijazah with Sanad Academy platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

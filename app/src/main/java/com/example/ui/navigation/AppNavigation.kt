@@ -45,7 +45,7 @@ fun AppNavigation(
     val navController = rememberNavController()
     var currentLanguage by remember { mutableStateOf(AppLanguage.ARABIC) }
 
-    // طلب إذن الإشعارات الذكية في أندرويد 13+ لعرض التنبيهات في شريط الإشعارات
+    // طلب إذن الإشعارات
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -64,12 +64,20 @@ fun AppNavigation(
 
     val isOnboardingCompleted by maqraahViewModel.isOnboardingCompleted.collectAsState()
     val currentUser by maqraahViewModel.currentUser.collectAsState()
-    // حالة التحميل لمنع ظهور شاشة الدخول لثانية واحدة أثناء جلب بيانات Firebase
     val isLoadingAuth by maqraahViewModel.isLoadingAuth.collectAsState()
 
     var showUnauthorizedAdminDialog by remember { mutableStateOf(false) }
 
-    // Enforce Layout Direction (RTL for Arabic, LTR for English and Amharic)
+    // الحل الجذري: مراقبة حالة الدخول والتوجيه التلقائي
+    LaunchedEffect(currentUser, isLoadingAuth) {
+        if (!isLoadingAuth && currentUser != null) {
+            // المستخدم مسجل دخول بنجاح، انتقل للرئيسية وتخلص من شاشة الدخول
+            navController.navigate(Screen.Home.route) {
+                popUpTo(Screen.Auth.route) { inclusive = true }
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalLayoutDirection provides currentLanguage.layoutDirection) {
 
         // 1. شاشة التحميل
@@ -80,7 +88,7 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 2. Onboarding 4 screens if not completed
+        // 2. شاشة الترحيب (إذا لم تكتمل)
         if (!isOnboardingCompleted) {
             OnboardingScreen(
                 currentLanguage = currentLanguage,
@@ -90,19 +98,12 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 3. Authentication Screen if user is logged out
+        // 3. شاشة تسجيل الدخول (فقط إذا لم يوجد مستخدم)
         if (currentUser == null) {
             AuthScreen(
                 currentLanguage = currentLanguage,
                 onSignIn = { email, name, phone, gender, program ->
-                    maqraahViewModel.registerOrSignInStudent(
-                        email = email,
-                        name = name,
-                        phone = phone,
-                        gender = gender,
-                        targetProgram = program
-                    )
-                    // إرسال تنبيه حقيقي ومباشر إلى لوحة إشعارات الجوال (Notification Panel)
+                    maqraahViewModel.registerOrSignInStudent(email, name, phone, gender, program)
                     if (maqraahViewModel.isAdminEmail(email)) {
                         SmartNotificationManager.notifyAdminNewStudent(context, name, program)
                     } else {
@@ -113,11 +114,10 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 4. الواجهة الرئيسية للتطبيق (بعد تسجيل الدخول)
+        // 4. الواجهة الرئيسية (للمستخدم المسجل)
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
-        // تحديد صلاحية المشرف
         val isAdmin = currentUser?.role == UserRole.ADMIN || maqraahViewModel.isAdminEmail(currentUser?.email)
 
         val showBottomBar = currentRoute in listOf(
@@ -145,7 +145,6 @@ fun AppNavigation(
                             horizontalArrangement = Arrangement.SpaceAround,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // 1. [حسابي] (Profile)
                             BottomNavItem(
                                 selected = currentRoute == Screen.Profile.route,
                                 icon = Icons.Default.Person,
@@ -159,7 +158,6 @@ fun AppNavigation(
                                 }
                             )
 
-                            // 2. [باقاتي] (Packages) - تظهر للطالب ليشحن، وللمشرف ليعدل الأسعار
                             BottomNavItem(
                                 selected = currentRoute == Screen.Packages.route,
                                 icon = Icons.Default.Payment,
@@ -173,7 +171,6 @@ fun AppNavigation(
                                 }
                             )
 
-                            // 3. [الرئيسية] (Home - CENTER, PROMINENT, LARGER)
                             Box(
                                 modifier = Modifier
                                     .offset(y = (-10).dp)
@@ -202,7 +199,6 @@ fun AppNavigation(
                                 )
                             }
 
-                            // 4. [المحادثات] (Chats)
                             BottomNavItem(
                                 selected = currentRoute == Screen.Chats.route,
                                 icon = Icons.Default.Chat,
@@ -216,8 +212,6 @@ fun AppNavigation(
                                 }
                             )
 
-                            // 5. [الإدارة] (Admin - Strictly Protected with feedback)
-                            // يظهر زر الإدارة فقط للمشرف، ولا يظهر للطالب
                             if (isAdmin) {
                                 BottomNavItem(
                                     selected = currentRoute == Screen.Admin.route,
@@ -252,7 +246,6 @@ fun AppNavigation(
                         )
                     }
                     composable(Screen.Packages.route) {
-                        // شاشة الباقات: سيتم عرضها للمشرف (للتعديل) وللطالب (للشراء)
                         PackagesScreen(
                             currentLanguage = currentLanguage,
                             currentUser = currentUser,
@@ -284,33 +277,6 @@ fun AppNavigation(
                     }
                 }
             }
-        }
-
-        // Unauthorized Admin Dialog (في حال حاول مستخدم غير مشرف الدخول عبر رابط مباشر)
-        if (showUnauthorizedAdminDialog) {
-            AlertDialog(
-                onDismissRequest = { showUnauthorizedAdminDialog = false },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(36.dp)
-                    )
-                },
-                title = { Text(text = "صلاحية مقيدة", fontWeight = FontWeight.Bold) },
-                text = {
-                    Text(
-                        text = Strings.get("no_admin_access", currentLanguage),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
-                confirmButton = {
-                    Button(onClick = { showUnauthorizedAdminDialog = false }) {
-                        Text(text = "حسناً")
-                    }
-                }
-            )
         }
     }
 }

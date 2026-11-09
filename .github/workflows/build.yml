@@ -27,7 +27,7 @@ jobs:
 
       - name: Setup Secrets and Environment Files
         env:
-          RAW_GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          RAW_GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_BASE64 }}
           RAW_DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
           RAW_GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
           RAW_APPCHECK_TOKEN: ${{ secrets.FIREBASE_APPCHECK_DEBUG_TOKEN }}
@@ -40,33 +40,24 @@ jobs:
           echo "LIVEKIT_API_KEY=${{ secrets.LIVEKIT_API_KEY }}" >> .env
           echo "LIVEKIT_API_SECRET=${{ secrets.LIVEKIT_API_SECRET }}" >> .env
 
-          # 2. كتابة ملف google-services.json
+          # 2. فك تشفير ملف google-services.json من Base64
           if [ -n "$RAW_GOOGLE_SERVICES" ]; then
-            printf "%s\n" "$RAW_GOOGLE_SERVICES" > app/google-services.json
-            
-            # التحقق هل هو json سليم أم لا
+            echo "$RAW_GOOGLE_SERVICES" | base64 -di > app/google-services.json
+            # التحقق هل هو json سليم أم لا بعد فك التشفير
             if python3 -m json.tool app/google-services.json > /dev/null 2>&1; then
               echo "✓ google-services.json is valid JSON"
             else
-              echo "⚠ Warning: GOOGLE_SERVICES_JSON is not valid JSON! Removing to prevent build failure..."
+              echo "⚠ Warning: GOOGLE_SERVICES_BASE64 is not valid JSON after decoding! Removing to prevent build failure..."
               rm -f app/google-services.json
             fi
           fi
 
-          # 3. توفير ملف debug.keystore أو توليده تلقائياً (لأنه غير موجود في الأسرار)
-          if [ -f "debug.keystore.base64" ] && [ -s "debug.keystore.base64" ]; then
-            base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
-          fi
-
-          if [ ! -f "debug.keystore" ] || [ ! -s "debug.keystore" ]; then
-            if [ -n "$RAW_DEBUG_KEYSTORE" ]; then
-              echo "$RAW_DEBUG_KEYSTORE" | base64 -d > debug.keystore 2>/dev/null || true
-            fi
-          fi
-
-          # إذا لم يتوفر، نولده فوراً
-          if [ ! -f "debug.keystore" ] || [ ! -s "debug.keystore" ]; then
-            echo "Generating fresh debug.keystore via keytool..."
+          # 3. فك تشفير مفتاح الديبوغ الثابت
+          if [ -n "$RAW_DEBUG_KEYSTORE" ]; then
+            echo "$RAW_DEBUG_KEYSTORE" | base64 -di > debug.keystore
+            echo "✓ debug.keystore decoded successfully."
+          else
+            echo "⚠ Warning: DEBUG_KEYSTORE_BASE64 is empty! Generating a temporary one..."
             keytool -genkeypair -v -keystore debug.keystore \
               -storepass android \
               -alias androiddebugkey \
@@ -76,14 +67,13 @@ jobs:
               -validity 10000 \
               -dname "CN=AndroidDebug,O=Android,C=US"
           fi
-
+          
           echo "✓ debug.keystore status:"
           ls -la debug.keystore
 
-          chmod +x gradlew || true
-
       - name: Build Debug APK
         run: |
+          chmod +x gradlew || true
           if [ -f "gradlew" ]; then
             ./gradlew assembleDebug --no-daemon --stacktrace
           else

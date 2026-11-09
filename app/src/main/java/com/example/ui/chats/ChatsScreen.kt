@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -78,8 +79,17 @@ fun ChatsScreen(
         val grp = groups.find { it.id == activeGroup!!.id } ?: activeGroup!!
         val msgs = allMessages[grp.id] ?: emptyList()
         var groupTextToSend by remember { mutableStateOf("") }
+        
+        // أداة للتمرير التلقائي
+        val listState = rememberLazyListState()
+        LaunchedEffect(msgs.size) {
+            if (msgs.isNotEmpty()) {
+                listState.animateScrollToItem(msgs.size - 1)
+            }
+        }
 
         Scaffold(
+            modifier = Modifier.imePadding(), // رفع الشاشة مع الكيبورد
             topBar = {
                 TopAppBar(
                     title = {
@@ -393,6 +403,7 @@ fun ChatsScreen(
 
                 // --- TELEGRAM-STYLE GROUP MESSAGES LIST ---
                 LazyColumn(
+                    state = listState, // تم ربط التمرير التلقائي هنا
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f)
@@ -456,14 +467,14 @@ fun ChatsScreen(
                             contentAlignment = if (msg.isMine) Alignment.CenterEnd else Alignment.CenterStart
                         ) {
                             Surface(
-                                color = if (msg.isMine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                                shape = RoundedCornerShape(
-                                    topStart = 16.dp,
-                                    topEnd = 16.dp,
-                                    bottomStart = if (msg.isMine) 16.dp else 4.dp,
-                                    bottomEnd = if (msg.isMine) 4.dp else 16.dp
-                                ),
-                                tonalElevation = if (msg.isMine) 0.dp else 2.dp,
+                                // ألوان الفقاعات الجديدة
+                                color = if (msg.isMine) MaterialTheme.colorScheme.primaryContainer else Color.White,
+                                shape = if (msg.isMine) {
+                                    RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+                                } else {
+                                    RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp)
+                                },
+                                shadowElevation = if (msg.isMine) 0.dp else 1.dp, // ظل خفيف
                                 modifier = Modifier.widthIn(max = 290.dp)
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
@@ -501,7 +512,7 @@ fun ChatsScreen(
                                         Text(
                                             text = msg.timestamp,
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                            color = Color.Gray
                                         )
                                         if (msg.isMine) {
                                             Spacer(modifier = Modifier.width(4.dp))
@@ -654,8 +665,17 @@ fun ChatsScreen(
         val conv = activeConversation!!
         val msgs = allMessages[conv.id] ?: emptyList()
         var textToSend by remember { mutableStateOf("") }
+        
+        // أداة للتمرير التلقائي
+        val listState = rememberLazyListState()
+        LaunchedEffect(msgs.size) {
+            if (msgs.isNotEmpty()) {
+                listState.animateScrollToItem(msgs.size - 1)
+            }
+        }
 
         Scaffold(
+            modifier = Modifier.imePadding(), // رفع الشاشة مع الكيبورد
             topBar = {
                 TopAppBar(
                     title = {
@@ -724,6 +744,7 @@ fun ChatsScreen(
             }
         ) { innerPadding ->
             LazyColumn(
+                state = listState, // تم ربط التمرير التلقائي هنا
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
@@ -737,9 +758,14 @@ fun ChatsScreen(
                         contentAlignment = if (msg.isMine) Alignment.CenterEnd else Alignment.CenterStart
                     ) {
                         Surface(
-                            color = if (msg.isMine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(16.dp),
-                            tonalElevation = if (msg.isMine) 0.dp else 1.dp,
+                            // ألوان الفقاعات الجديدة
+                            color = if (msg.isMine) MaterialTheme.colorScheme.primaryContainer else Color.White,
+                            shape = if (msg.isMine) {
+                                RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+                            } else {
+                                RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp)
+                            },
+                            shadowElevation = if (msg.isMine) 0.dp else 1.dp,
                             modifier = Modifier.widthIn(max = 280.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
@@ -752,7 +778,7 @@ fun ChatsScreen(
                                 Text(
                                     text = msg.timestamp,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    color = Color.Gray,
                                     modifier = Modifier.align(Alignment.End)
                                 )
                             }
@@ -811,79 +837,87 @@ fun ChatsScreen(
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(conversations) { conv ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { activeConversation = conv },
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
+                    if (conversations.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text("لا توجد محادثات خاصة حالياً.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } else {
+                        items(conversations) { conv ->
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .clickable { activeConversation = conv },
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Box(
+                                Row(
                                     modifier = Modifier
-                                        .size(50.dp)
-                                        .clip(CircleShape)
-                                        .background(if (conv.isOfficial) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
-                                    contentAlignment = Alignment.Center
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        imageVector = if (conv.isOfficial) Icons.Default.Verified else Icons.Default.Person,
-                                        contentDescription = null,
-                                        tint = if (conv.isOfficial) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Box(
+                                        modifier = Modifier
+                                            .size(50.dp)
+                                            .clip(CircleShape)
+                                            .background(if (conv.isOfficial) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Text(
-                                            text = conv.participantName,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = conv.lastMessageTime,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        Icon(
+                                            imageVector = if (conv.isOfficial) Icons.Default.Verified else Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = if (conv.isOfficial) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(28.dp)
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = conv.lastMessage,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        if (conv.unreadCount > 0) {
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.primary,
-                                                shape = CircleShape,
-                                                modifier = Modifier.size(20.dp)
-                                            ) {
-                                                Box(contentAlignment = Alignment.Center) {
-                                                    Text(
-                                                        text = "${conv.unreadCount}",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onPrimary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = conv.participantName,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = conv.lastMessageTime,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = conv.lastMessage,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            if (conv.unreadCount > 0) {
+                                                Surface(
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    shape = CircleShape,
+                                                    modifier = Modifier.size(20.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Text(
+                                                            text = "${conv.unreadCount}",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.onPrimary,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -931,144 +965,152 @@ fun ChatsScreen(
                         }
                     }
 
-                    items(groups) { group ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { activeGroup = group },
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Column {
-                                Image(
-                                    painter = painterResource(id = R.drawable.img_halaqah_study),
-                                    contentDescription = group.nameAr,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(90.dp)
-                                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = group.nameAr,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.weight(1f)
+                    if (groups.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text("لا توجد حلقات مجموعات حالياً.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } else {
+                        items(groups) { group ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { activeGroup = group },
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Column {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.img_halaqah_study),
+                                        contentDescription = group.nameAr,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(90.dp)
+                                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                                        contentScale = ContentScale.Crop
                                     )
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        if (group.isLiveNow) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = group.nameAr,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            if (group.isLiveNow) {
+                                                Surface(
+                                                    color = Color(0xFFDC2626),
+                                                    shape = RoundedCornerShape(6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "بث مباشر 🔴",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color.White,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                                    )
+                                                }
+                                            }
                                             Surface(
-                                                color = Color(0xFFDC2626),
+                                                color = when (group.gender) {
+                                                    GenderCategory.BROTHERS -> MaterialTheme.colorScheme.primaryContainer
+                                                    GenderCategory.SISTERS -> MaterialTheme.colorScheme.secondaryContainer
+                                                    GenderCategory.GENERAL -> TelegramBlue.copy(alpha = 0.15f)
+                                                },
                                                 shape = RoundedCornerShape(6.dp)
                                             ) {
                                                 Text(
-                                                    text = "بث مباشر 🔴",
+                                                    text = group.gender.labelAr,
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color.White,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                                    color = when (group.gender) {
+                                                        GenderCategory.BROTHERS -> MaterialTheme.colorScheme.primary
+                                                        GenderCategory.SISTERS -> Color(0xFF92400E)
+                                                        GenderCategory.GENERAL -> TelegramBlue
+                                                    },
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                                 )
                                             }
                                         }
-                                        Surface(
-                                            color = when (group.gender) {
-                                                GenderCategory.BROTHERS -> MaterialTheme.colorScheme.primaryContainer
-                                                GenderCategory.SISTERS -> MaterialTheme.colorScheme.secondaryContainer
-                                                GenderCategory.GENERAL -> TelegramBlue.copy(alpha = 0.15f)
-                                            },
-                                            shape = RoundedCornerShape(6.dp)
-                                        ) {
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Text(
+                                        text = "المعلم المشرف: ${group.teacherName}",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = "التلاوة والمنهج: ${group.currentSurah}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    if (group.isLiveNow) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        if (group.activeSession != null) {
                                             Text(
-                                                text = group.gender.labelAr,
+                                                text = "🎙️ في البث الآن: ${group.activeSession.studentName} (${group.activeSession.studentCode})",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Bold,
-                                                color = when (group.gender) {
-                                                    GenderCategory.BROTHERS -> MaterialTheme.colorScheme.primary
-                                                    GenderCategory.SISTERS -> Color(0xFF92400E)
-                                                    GenderCategory.GENERAL -> TelegramBlue
-                                                },
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                color = Color(0xFF16A34A)
                                             )
                                         }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Text(
-                                    text = "المعلم المشرف: ${group.teacherName}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = "التلاوة والمنهج: ${group.currentSurah}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                if (group.isLiveNow) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    if (group.activeSession != null) {
                                         Text(
-                                            text = "🎙️ في البث الآن: ${group.activeSession.studentName} (${group.activeSession.studentCode})",
+                                            text = "⏳ طابور الانتظار: ${group.queue.size} طلاب ينتظرون دورهم",
                                             style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF16A34A)
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
-                                    Text(
-                                        text = "⏳ طابور الانتظار: ${group.queue.size} طلاب ينتظرون دورهم",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = "${group.membersCount} عضواً",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        if (!group.telegramLink.isNullOrBlank()) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Surface(
-                                                color = TelegramBlue.copy(alpha = 0.12f),
-                                                shape = RoundedCornerShape(4.dp)
-                                            ) {
-                                                Text(
-                                                    text = "تليغرام متاح ✓",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = TelegramBlue,
-                                                    fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "${group.membersCount} عضواً",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            if (!group.telegramLink.isNullOrBlank()) {
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Surface(
+                                                    color = TelegramBlue.copy(alpha = 0.12f),
+                                                    shape = RoundedCornerShape(4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "تليغرام متاح ✓",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = TelegramBlue,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
 
-                                    Button(
-                                        onClick = { activeGroup = group },
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Icon(Icons.Default.Forum, contentDescription = null, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(text = "دخول الحلقة")
+                                        Button(
+                                            onClick = { activeGroup = group },
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.Forum, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(text = "دخول الحلقة")
+                                        }
                                     }
                                 }
                             }

@@ -109,7 +109,7 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 4. الواجهة الرئيسية (يتم الانتقال إليها تلقائياً بمجرد أن يصبح currentUser غير فارغ)
+        // 4. الواجهة الرئيسية
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
@@ -144,26 +144,14 @@ fun AppNavigation(
                                 selected = currentRoute == Screen.Profile.route,
                                 icon = Icons.Default.Person,
                                 label = Strings.get("tab_profile", currentLanguage),
-                                onClick = {
-                                    navController.navigate(Screen.Profile.route) {
-                                        popUpTo(Screen.Home.route) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
+                                onClick = { navController.navigate(Screen.Profile.route) { popUpTo(Screen.Home.route) { saveState = true }; launchSingleTop = true; restoreState = true } }
                             )
 
                             BottomNavItem(
                                 selected = currentRoute == Screen.Packages.route,
                                 icon = Icons.Default.Payment,
                                 label = Strings.get("tab_packages", currentLanguage),
-                                onClick = {
-                                    navController.navigate(Screen.Packages.route) {
-                                        popUpTo(Screen.Home.route) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
+                                onClick = { navController.navigate(Screen.Packages.route) { popUpTo(Screen.Home.route) { saveState = true }; launchSingleTop = true; restoreState = true } }
                             )
 
                             Box(
@@ -171,40 +159,18 @@ fun AppNavigation(
                                     .offset(y = (-10).dp)
                                     .size(60.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        if (currentRoute == Screen.Home.route)
-                                            MaterialTheme.colorScheme.primary
-                                        else
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
-                                    )
-                                    .clickable {
-                                        navController.navigate(Screen.Home.route) {
-                                            popUpTo(Screen.Home.route) { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
+                                    .background(if (currentRoute == Screen.Home.route) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
+                                    .clickable { navController.navigate(Screen.Home.route) { popUpTo(Screen.Home.route) { saveState = true }; launchSingleTop = true; restoreState = true } },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Home,
-                                    contentDescription = "الرئيسية",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(32.dp)
-                                )
+                                Icon(Icons.Default.Home, contentDescription = "الرئيسية", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(32.dp))
                             }
 
                             BottomNavItem(
                                 selected = currentRoute == Screen.Chats.route,
                                 icon = Icons.Default.Chat,
                                 label = Strings.get("tab_chats", currentLanguage),
-                                onClick = {
-                                    navController.navigate(Screen.Chats.route) {
-                                        popUpTo(Screen.Home.route) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
+                                onClick = { navController.navigate(Screen.Chats.route) { popUpTo(Screen.Home.route) { saveState = true }; launchSingleTop = true; restoreState = true } }
                             )
 
                             if (isAdmin) {
@@ -212,13 +178,7 @@ fun AppNavigation(
                                     selected = currentRoute == Screen.Admin.route,
                                     icon = Icons.Default.AdminPanelSettings,
                                     label = Strings.get("tab_admin", currentLanguage),
-                                    onClick = {
-                                        navController.navigate(Screen.Admin.route) {
-                                            popUpTo(Screen.Home.route) { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    }
+                                    onClick = { navController.navigate(Screen.Admin.route) { popUpTo(Screen.Home.route) { saveState = true }; launchSingleTop = true; restoreState = true } }
                                 )
                             }
                         }
@@ -227,48 +187,31 @@ fun AppNavigation(
             }
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
-                NavHost(
-                    navController = navController,
-                    startDestination = Screen.Home.route
-                ) {
+                NavHost(navController = navController, startDestination = Screen.Home.route) {
                     composable(Screen.Home.route) {
-                        HomeScreen(
-                            currentLanguage = currentLanguage,
-                            currentUser = currentUser,
-                            maqraahViewModel = maqraahViewModel,
-                            onLanguageChanged = { currentLanguage = it },
-                            onNavigate = { route -> navController.navigate(route) }
-                        )
+                        HomeScreen(currentLanguage, currentUser, maqraahViewModel, { currentLanguage = it }, { route -> navController.navigate(route) })
                     }
                     composable(Screen.Packages.route) {
-                        PackagesScreen(
-                            currentLanguage = currentLanguage,
-                            currentUser = currentUser,
-                            maqraahViewModel = maqraahViewModel
-                        )
+                        PackagesScreen(currentLanguage, currentUser, maqraahViewModel)
                     }
                     composable(Screen.Chats.route) {
-                        ChatsScreen(
-                            currentLanguage = currentLanguage,
-                            maqraahViewModel = maqraahViewModel
-                        )
+                        ChatsScreen(currentLanguage, maqraahViewModel)
                     }
                     composable(Screen.Profile.route) {
-                        ProfileScreen(
-                            currentLanguage = currentLanguage,
-                            currentUser = currentUser!!,
-                            maqraahViewModel = maqraahViewModel,
-                            onLanguageChanged = { currentLanguage = it },
-                            onNavigateToAdmin = { navController.navigate(Screen.Admin.route) },
-                            onSignOut = { maqraahViewModel.signOut() }
-                        )
+                        // ✅ الحل السحري: استخدام let لمنع الانهيار إذا كانت البيانات فارغة
+                        currentUser?.let { safeUser ->
+                            ProfileScreen(
+                                currentLanguage = currentLanguage,
+                                currentUser = safeUser,
+                                maqraahViewModel = maqraahViewModel,
+                                onLanguageChanged = { currentLanguage = it },
+                                onNavigateToAdmin = { navController.navigate(Screen.Admin.route) },
+                                onSignOut = { maqraahViewModel.signOut() }
+                            )
+                        }
                     }
                     composable(Screen.Admin.route) {
-                        AdminDashboardScreen(
-                            currentLanguage = currentLanguage,
-                            maqraahViewModel = maqraahViewModel,
-                            onBack = { navController.popBackStack() }
-                        )
+                        AdminDashboardScreen(currentLanguage, maqraahViewModel, { navController.popBackStack() })
                     }
                 }
             }
@@ -277,26 +220,10 @@ fun AppNavigation(
         if (showUnauthorizedAdminDialog) {
             AlertDialog(
                 onDismissRequest = { showUnauthorizedAdminDialog = false },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(36.dp)
-                    )
-                },
+                icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(36.dp)) },
                 title = { Text(text = "صلاحية مقيدة", fontWeight = FontWeight.Bold) },
-                text = {
-                    Text(
-                        text = Strings.get("no_admin_access", currentLanguage),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
-                confirmButton = {
-                    Button(onClick = { showUnauthorizedAdminDialog = false }) {
-                        Text(text = "حسناً")
-                    }
-                }
+                text = { Text(text = Strings.get("no_admin_access", currentLanguage), style = MaterialTheme.typography.bodyMedium) },
+                confirmButton = { Button(onClick = { showUnauthorizedAdminDialog = false }) { Text(text = "حسناً") } }
             )
         }
     }
@@ -310,25 +237,12 @@ fun BottomNavItem(
     onClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .clickable { onClick() }
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+        modifier = Modifier.clickable { onClick() }.padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp)
-        )
+        Icon(imageVector = icon, contentDescription = label, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.height(3.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 11.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text(text = label, style = MaterialTheme.typography.labelSmall, fontSize = 11.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

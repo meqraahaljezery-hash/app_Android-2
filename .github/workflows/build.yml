@@ -40,11 +40,11 @@ jobs:
           echo "LIVEKIT_API_KEY=${{ secrets.LIVEKIT_API_KEY }}" >> .env
           echo "LIVEKIT_API_SECRET=${{ secrets.LIVEKIT_API_SECRET }}" >> .env
 
-          # 2. كتابة ملف google-services.json والتحقق من صحته كـ JSON سليم
+          # 2. كتابة ملف google-services.json
           if [ -n "$RAW_GOOGLE_SERVICES" ]; then
             printf "%s\n" "$RAW_GOOGLE_SERVICES" > app/google-services.json
             
-            # التحقق هل هو json سليم أم لا بواسطة python
+            # التحقق هل هو json سليم أم لا
             if python3 -m json.tool app/google-services.json > /dev/null 2>&1; then
               echo "✓ google-services.json is valid JSON"
             else
@@ -53,7 +53,7 @@ jobs:
             fi
           fi
 
-          # 3. توفير ملف debug.keystore وضمان وجوده دائماً وعدم فشل البناء مطلقاً
+          # 3. توفير ملف debug.keystore أو توليده تلقائياً (لأنه غير موجود في الأسرار)
           if [ -f "debug.keystore.base64" ] && [ -s "debug.keystore.base64" ]; then
             base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
           fi
@@ -64,7 +64,7 @@ jobs:
             fi
           fi
 
-          # إذا لم يتوفر بعد ذلك، نولده فوراً باستخدام keytool
+          # إذا لم يتوفر، نولده فوراً
           if [ ! -f "debug.keystore" ] || [ ! -s "debug.keystore" ]; then
             echo "Generating fresh debug.keystore via keytool..."
             keytool -genkeypair -v -keystore debug.keystore \
@@ -83,7 +83,12 @@ jobs:
           chmod +x gradlew || true
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: |
+          if [ -f "gradlew" ]; then
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          else
+            gradle assembleDebug --no-daemon --stacktrace
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

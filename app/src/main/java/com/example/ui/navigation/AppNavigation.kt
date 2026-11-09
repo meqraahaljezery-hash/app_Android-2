@@ -45,6 +45,7 @@ fun AppNavigation(
     val navController = rememberNavController()
     var currentLanguage by remember { mutableStateOf(AppLanguage.ARABIC) }
 
+    // طلب إذن الإشعارات الذكية في أندرويد 13+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -65,20 +66,12 @@ fun AppNavigation(
     val currentUser by maqraahViewModel.currentUser.collectAsState()
     val isLoadingAuth by maqraahViewModel.isLoadingAuth.collectAsState()
 
-    // ✅ التوجيه التلقائي فور نجاح تسجيل الدخول
-    LaunchedEffect(currentUser, isLoadingAuth) {
-        if (!isLoadingAuth && currentUser != null) {
-            navController.navigate(Screen.Home.route) {
-                popUpTo(Screen.Auth.route) { inclusive = true }
-            }
-        }
-    }
-
     var showUnauthorizedAdminDialog by remember { mutableStateOf(false) }
 
+    // Enforce Layout Direction (RTL for Arabic, LTR for English and Amharic)
     CompositionLocalProvider(LocalLayoutDirection provides currentLanguage.layoutDirection) {
 
-        // 1. شاشة التحميل
+        // 1. شاشة التحميل (لمنع ظهور شاشة الدخول لثانية أثناء جلب البيانات من Firebase)
         if (isLoadingAuth) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -96,7 +89,7 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 3. شاشة تسجيل الدخول (فقط إذا لم يوجد مستخدم)
+        // 3. شاشة تسجيل الدخول (تظهر تلقائياً إذا لم يوجد مستخدم مسجل)
         if (currentUser == null) {
             AuthScreen(
                 currentLanguage = currentLanguage,
@@ -118,7 +111,7 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 4. واجهة التطبيق (للمستخدم المسجل)
+        // 4. الواجهة الرئيسية للتطبيق (تظهر تلقائياً بمجرد نجاح تسجيل الدخول)
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
@@ -149,6 +142,7 @@ fun AppNavigation(
                             horizontalArrangement = Arrangement.SpaceAround,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // 1. حسابي
                             BottomNavItem(
                                 selected = currentRoute == Screen.Profile.route,
                                 icon = Icons.Default.Person,
@@ -162,6 +156,7 @@ fun AppNavigation(
                                 }
                             )
 
+                            // 2. باقاتي
                             BottomNavItem(
                                 selected = currentRoute == Screen.Packages.route,
                                 icon = Icons.Default.Payment,
@@ -175,6 +170,7 @@ fun AppNavigation(
                                 }
                             )
 
+                            // 3. الرئيسية (الزر الكبير في المنتصف)
                             Box(
                                 modifier = Modifier
                                     .offset(y = (-10).dp)
@@ -203,6 +199,7 @@ fun AppNavigation(
                                 )
                             }
 
+                            // 4. المحادثات
                             BottomNavItem(
                                 selected = currentRoute == Screen.Chats.route,
                                 icon = Icons.Default.Chat,
@@ -216,6 +213,7 @@ fun AppNavigation(
                                 }
                             )
 
+                            // 5. الإدارة (تظهر فقط للمشرف)
                             if (isAdmin) {
                                 BottomNavItem(
                                     selected = currentRoute == Screen.Admin.route,
@@ -282,6 +280,33 @@ fun AppNavigation(
                 }
             }
         }
+
+        // Unauthorized Admin Dialog
+        if (showUnauthorizedAdminDialog) {
+            AlertDialog(
+                onDismissRequest = { showUnauthorizedAdminDialog = false },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(36.dp)
+                    )
+                },
+                title = { Text(text = "صلاحية مقيدة", fontWeight = FontWeight.Bold) },
+                text = {
+                    Text(
+                        text = Strings.get("no_admin_access", currentLanguage),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = { showUnauthorizedAdminDialog = false }) {
+                        Text(text = "حسناً")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -314,4 +339,13 @@ fun BottomNavItem(
             color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+// ✅ تعريف مسارات التنقل (ضروري جداً لكي يعمل الكود بدون أخطاء)
+sealed class Screen(val route: String) {
+    object Home : Screen("home")
+    object Profile : Screen("profile")
+    object Packages : Screen("packages")
+    object Chats : Screen("chats")
+    object Admin : Screen("admin")
 }

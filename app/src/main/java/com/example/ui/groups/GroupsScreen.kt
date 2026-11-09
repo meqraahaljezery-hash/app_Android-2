@@ -38,94 +38,9 @@ fun GroupsScreen(
     val context = LocalContext.current
     val vmGroups = maqraahViewModel?.groups?.collectAsState()?.value
 
-    val defaultList = listOf(
-        HalqahGroup(
-            id = "grp_m_morning",
-            nameAr = "حلقات الذكور - الفترة الصباحية (الفجر والضحى)",
-            nameEn = "Brothers Halaqat - Morning Session",
-            timeSlot = GroupTimeSlot.MORNING,
-            gender = GenderCategory.BROTHERS,
-            teacherName = "المشرف العام وهيئة الإقراء",
-            isLiveNow = true,
-            membersCount = 18,
-            currentSurah = "سورة البقرة وتصحيح التلاوة",
-            liveRoomId = "room-m-morning"
-        ),
-        HalqahGroup(
-            id = "grp_m_evening",
-            nameAr = "حلقات الذكور - الفترة المسائية (العصر والمغرب)",
-            nameEn = "Brothers Halaqat - Evening Session",
-            timeSlot = GroupTimeSlot.EVENING,
-            gender = GenderCategory.BROTHERS,
-            teacherName = "مشايخ الإقراء المعتمدون",
-            isLiveNow = false,
-            membersCount = 15,
-            currentSurah = "سورة آل عمران والنساء",
-            liveRoomId = "room-m-evening"
-        ),
-        HalqahGroup(
-            id = "grp_m_night",
-            nameAr = "حلقات الذكور - الفترة الليلية (العشاء والسحر)",
-            nameEn = "Brothers Halaqat - Night Session",
-            timeSlot = GroupTimeSlot.NIGHT,
-            gender = GenderCategory.BROTHERS,
-            teacherName = "مشايخ الحفظ والإجازة بالسند",
-            isLiveNow = true,
-            membersCount = 22,
-            currentSurah = "عرض الختمات والمراجعة المكثفة",
-            liveRoomId = "room-m-night"
-        ),
-        HalqahGroup(
-            id = "grp_f_morning",
-            nameAr = "حلقات الإناث - الفترة الصباحية (الفجر والضحى)",
-            nameEn = "Sisters Halaqat - Morning Session",
-            timeSlot = GroupTimeSlot.MORNING,
-            gender = GenderCategory.SISTERS,
-            teacherName = "المعلمات المسندات الفضليات",
-            isLiveNow = true,
-            membersCount = 16,
-            currentSurah = "سورة البقرة والتلقين",
-            liveRoomId = "room-f-morning"
-        ),
-        HalqahGroup(
-            id = "grp_f_evening",
-            nameAr = "حلقات الإناث - الفترة المسائية (العصر والمغرب)",
-            nameEn = "Sisters Halaqat - Evening Session",
-            timeSlot = GroupTimeSlot.EVENING,
-            gender = GenderCategory.SISTERS,
-            teacherName = "المعلمات المقرئات",
-            isLiveNow = false,
-            membersCount = 14,
-            currentSurah = "الحفظ والمراجعة",
-            liveRoomId = "room-f-evening"
-        ),
-        HalqahGroup(
-            id = "grp_f_night",
-            nameAr = "حلقات الإناث - الفترة الليلية (العشاء والسحر)",
-            nameEn = "Sisters Halaqat - Night Session",
-            timeSlot = GroupTimeSlot.NIGHT,
-            gender = GenderCategory.SISTERS,
-            teacherName = "نخبة المعلمات المسندات",
-            isLiveNow = true,
-            membersCount = 19,
-            currentSurah = "عرض الختمات والإتقان",
-            liveRoomId = "room-f-night"
-        ),
-        HalqahGroup(
-            id = "grp_general",
-            nameAr = "الملتقى القرآني العام (كافة الطلاب والمعلمين)",
-            nameEn = "General Quranic Forum",
-            timeSlot = GroupTimeSlot.MORNING,
-            gender = GenderCategory.GENERAL,
-            teacherName = "إدارة المقرأة وهيئة الإقراء",
-            isLiveNow = true,
-            membersCount = 45,
-            currentSurah = "مذاكرة أحكام التجويد والمتون والفوائد",
-            liveRoomId = "room-general"
-        )
-    )
-
-    val groupsList = vmGroups ?: defaultList
+    // تم حذف القائمة الوهمية (defaultList) بالكامل من هنا
+    // الآن يعتمد التطبيق فقط على البيانات الحقيقية القادمة من Firebase
+    val groupsList = vmGroups ?: emptyList()
 
     var activeGroupDialog by remember { mutableStateOf<HalqahGroup?>(null) }
 
@@ -151,7 +66,7 @@ fun GroupsScreen(
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
-                        text = "الحلقات القرآنية الـ 7 مقسمة حسب الجنس والفترة لضمان الخصوصية وسهولة المشافهة مع المشايخ والمعلمات.",
+                        text = "الحلقات القرآنية مقسمة حسب الجنس والفترة لضمان الخصوصية وسهولة المشافهة مع المشايخ والمعلمات.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(10.dp)
@@ -159,74 +74,90 @@ fun GroupsScreen(
                 }
             }
 
-            items(groupsList) { group ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+            // إضافة شاشة فارغة إذا لم تكن هناك مجموعات حقيقية
+            if (groupsList.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Text(
+                            text = "لا توجد حلقات متاحة حالياً. يرجى إنشاء حلقة من شاشة المحادثات.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                items(groupsList) { group ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> group.nameEn
-                                    else -> group.nameAr
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (group.isLiveNow) {
-                                Badge(containerColor = MaterialTheme.colorScheme.error) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(Icons.Default.LiveTv, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.White)
-                                        Text(text = Strings.get("live_stream", currentLanguage), color = Color.White)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = when (currentLanguage) {
+                                        AppLanguage.ENGLISH -> group.nameEn
+                                        else -> group.nameAr
+                                    },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (group.isLiveNow) {
+                                    Badge(containerColor = MaterialTheme.colorScheme.error) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(Icons.Default.LiveTv, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.White)
+                                            Text(text = Strings.get("live_stream", currentLanguage), color = Color.White)
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        Text(
-                            text = "المشرف: ${group.teacherName}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "المنهج والتلاوة: ${group.currentSurah}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-
-                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
                             Text(
-                                text = "عدد الطلاب: ${group.membersCount}",
-                                style = MaterialTheme.typography.bodySmall
+                                text = "المشرف: ${group.teacherName}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Button(
-                                onClick = { activeGroupDialog = group },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            Text(
+                                text = "المنهج والتلاوة: ${group.currentSurah}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+
+                            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Groups, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = "دخول الحلقة")
+                                Text(
+                                    text = "عدد الطلاب: ${group.membersCount}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Button(
+                                    onClick = { activeGroupDialog = group },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                ) {
+                                    Icon(Icons.Default.Groups, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "دخول الحلقة")
+                                }
                             }
                         }
                     }

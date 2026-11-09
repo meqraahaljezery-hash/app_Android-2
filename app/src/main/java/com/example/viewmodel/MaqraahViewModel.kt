@@ -37,6 +37,7 @@ class MaqraahViewModel : ViewModel() {
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
     init {
+        // الاستماع لحالة تسجيل الدخول التلقائي عند فتح التطبيق
         auth.addAuthStateListener { firebaseAuth ->
             val firebaseUser = firebaseAuth.currentUser
             if (firebaseUser != null) {
@@ -46,13 +47,13 @@ class MaqraahViewModel : ViewModel() {
                             try {
                                 _currentUser.value = document.toObject(User::class.java)
                             } catch (e: Exception) {
-                                Log.e("FIREBASE_ERROR", "Mapping error: ${e.message}")
+                                Log.e("FIREBASE_ERROR", "Mapping error on init: ${e.message}")
                             }
                         }
                         _isLoadingAuth.value = false
                     }
                     .addOnFailureListener { e ->
-                        Log.e("FIREBASE_ERROR", "Fetch error: ${e.message}")
+                        Log.e("FIREBASE_ERROR", "Fetch error on init: ${e.message}")
                         _isLoadingAuth.value = false
                     }
             } else {
@@ -62,77 +63,13 @@ class MaqraahViewModel : ViewModel() {
         }
     }
 
-    // 3. Official Quran Programs (4 Core Programs from Spec)
+    // 3. Official Quran Programs
     private val _programs = MutableStateFlow(
         listOf(
-            Program(
-                id = "prog_talqin",
-                titleAr = "التلقين وتصحيح الأداء",
-                titleEn = "Talqin & Recitation Correction",
-                titleAm = "የቁርኣን ንባብ እና አነባበብ ማስተካከያ",
-                descriptionAr = "حلقات يومية مباشرة تركز على تصحيح مخارج الحروف، وضبط أزمنة الغنن والمدود، والمشافهة المباشرة مع المشايخ المسندين لتأسيس القراءة السليمة الخالية من اللحن.",
-                descriptionEn = "Daily live halaqat focusing on articulation points, Tajweed precision, and oral transmission with certified scholars.",
-                instructorName = "الشيخ عبد الله محمد النور",
-                instructorSanad = "مسند في القراءات العشر ومتون التجويد",
-                durationText = "3 أشهر (24 حلقة تفاعلية)",
-                totalHalaqat = 24,
-                prerequisiteAr = "الرغبة في تصحيح التلاوة ومعرفة القراءة الأساسية",
-                featuresAr = listOf("تسميع فردي وتصحيح مباشر", "متابعة أسبوعية في المتون", "شهادة إتمام مستوى"),
-                badgeTag = "تأسيسي وإتقان",
-                isOpenForRegistration = true,
-                enrolledCount = 0
-            ),
-            Program(
-                id = "prog_hifz",
-                titleAr = "الحفظ المكثف وتثبيت المحفوظ",
-                titleEn = "Intensive Memorization & Revision",
-                titleAm = "የተጠናከረ የቁርኣን ሂፍዝ እና ክለሳ",
-                descriptionAr = "منهج مكثف ومدروس لحفظ القرآن الكريم كاملاً مع المراجعة التراكمية اليومية ونظام استظهار صارم يضمن رسوخ الآيات كالفاتحة بإشراف حفاظ متقنين.",
-                descriptionEn = "Intensive curriculum for full Quran memorization with cumulative daily revision under master teachers.",
-                instructorName = "الشيخ الحافظ محمد أمين",
-                instructorSanad = "حفظ متقن بالسند المتصل",
-                durationText = "12 - 18 شهر",
-                totalHalaqat = 180,
-                prerequisiteAr = "الجدية والالتزام بساعات التسميع اليومية",
-                featuresAr = listOf("خطة حفظ يومية محكمة", "مراجعة 5 أجزاء أسبوعياً", "اختبارات إتقان دورية"),
-                badgeTag = "حفظ وإتقان",
-                isOpenForRegistration = true,
-                enrolledCount = 0
-            ),
-            Program(
-                id = "prog_hafs",
-                titleAr = "الإجازة برواية حفص عن عاصم",
-                titleEn = "Hafs An Asim Ijazah with Sanad",
-                titleAm = "የሃፍስ ከዓስም የሰነድ ኢጃዛ ፕሮግرام",
-                descriptionAr = "عرض الختمة كاملة غيباً من الفاتحة إلى الناس برواية حفص عن عاصم من طريق الشاطبية، مع تطبيق كافة دقائق التجويد للحصول على الإجازة المعتمدة بالسند المتصل إلى رسول الله ﷺ.",
-                descriptionEn = "Full memorized recitation from Al-Fatihah to An-Nas via Shatibiyyah for connected Sanad Ijazah to the Prophet ﷺ.",
-                instructorName = "فضيلة الشيخ د. إبراهيم أحمد الجزري",
-                instructorSanad = "سند عالي متصل إلى الإمام عاصم والإمام ابن الجزري",
-                durationText = "6 - 12 شهر",
-                totalHalaqat = 60,
-                prerequisiteAr = "حفظ القرآن الكريم كاملاً وإتقان متن الجزرية",
-                featuresAr = listOf("سند متصل معتمد", "مجلس ختم رسمي", "وثيقة إجازة مصدقة"),
-                badgeTag = "إجازة بالسند المتصل",
-                isOpenForRegistration = true,
-                enrolledCount = 0
-            ),
-            Program(
-                id = "prog_qiraat",
-                titleAr = "الإجازة بالقراءات السبع المتواترة",
-                titleEn = "Seven Mutawatir Qira'at Ijazah",
-                titleAm = "የሰባቱ ተከታታይ የቁርኣን ንባቦች ኢጃዛ",
-                descriptionAr = "برنامج الجمع والإفراد للقراءات السبع من طريق الشاطبية (حرز الأماني ووجه التهاني)، تأهيل نوعي لنخبة القراء ونيل أعلى الأسانيد المتصلة بأئمة الإقراء.",
-                descriptionEn = "Advanced recitation of the Seven Qira'at via Ash-Shatibiyyah for verified Quranic recitation masters.",
-                instructorName = "المقرئ الجامع الشيخ حسن علي",
-                instructorSanad = "إجازة في القراءات العشر الكبرى والصغرى",
-                durationText = "24 شهر",
-                totalHalaqat = 120,
-                prerequisiteAr = "إجازة سابقة برواية حفص وإتقان حفظ الشاطبية",
-                featuresAr = listOf("جمع القراءات بطريقة الإفراد والجمع", "تحريرات الشاطبية", "إجازة مسندة كبرى"),
-                badgeTag = "عالي الإسناد (تخصص)",
-                isOpenForRegistration = true,
-                enrolledCount = 0
-            )
+            Program(id = "prog_talqin", titleAr = "التلقين وتصحيح الأداء", titleEn = "Talqin & Recitation Correction", titleAm = "የቁርኣን ንባብ እና አነባበብ ማስተካከያ", descriptionAr = "حلقات يومية مباشرة تركز على تصحيح مخارج الحروف، وضبط أزمنة الغنن والمدود، والمشافهة المباشرة مع المشايخ المسندين لتأسيس القراءة السليمة الخالية من اللحن.", descriptionEn = "Daily live halaqat focusing on articulation points, Tajweed precision, and oral transmission with certified scholars.", instructorName = "الشيخ عبد الله محمد النور", instructorSanad = "مسند في القراءات العشر ومتون التجويد", durationText = "3 أشهر (24 حلقة تفاعلية)", totalHalaqat = 24, prerequisiteAr = "الرغبة في تصحيح التلاوة ومعرفة القراءة الأساسية", featuresAr = listOf("تسميع فردي وتصحيح مباشر", "متابعة أسبوعية في المتون", "شهادة إتمام مستوى"), badgeTag = "تأسيسي وإتقان", isOpenForRegistration = true, enrolledCount = 0),
+            Program(id = "prog_hifz", titleAr = "الحفظ المكثف وتثبيت المحفوظ", titleEn = "Intensive Memorization & Revision", titleAm = "የተጠናከረ የቁርኣን ሂፍዝ እና ክለሳ", descriptionAr = "منهج مكثف ومدروس لحفظ القرآن الكريم كاملاً مع المراجعة التراكمية اليومية ونظام استظهار صارم يضمن رسوخ الآيات كالفاتحة بإشراف حفاظ متقنين.", descriptionEn = "Intensive curriculum for full Quran memorization with cumulative daily revision under master teachers.", instructorName = "الشيخ الحافظ محمد أمين", instructorSanad = "حفظ متقن بالسند المتصل", durationText = "12 - 18 شهر", totalHalaqat = 180, prerequisiteAr = "الجدية والالتزام بساعات التسميع اليومية", featuresAr = listOf("خطة حفظ يومية محكمة", "مراجعة 5 أجزاء أسبوعياً", "اختبارات إتقان دورية"), badgeTag = "حفظ وإتقان", isOpenForRegistration = true, enrolledCount = 0),
+            Program(id = "prog_hafs", titleAr = "الإجازة برواية حفص عن عاصم", titleEn = "Hafs An Asim Ijazah with Sanad", titleAm = "የሃፍስ ከዓስም የሰነድ ኢጃዛ ፕሮግرام", descriptionAr = "عرض الختمة كاملة غيباً من الفاتحة إلى الناس برواية حفص عن عاصم من طريق الشاطبية، مع تطبيق كافة دقائق التجويد للحصول على الإجازة المعتمدة بالسند المتصل إلى رسول الله ﷺ.", descriptionEn = "Full memorized recitation from Al-Fatihah to An-Nas via Shatibiyyah for connected Sanad Ijazah to the Prophet ﷺ.", instructorName = "فضيلة الشيخ د. إبراهيم أحمد الجزري", instructorSanad = "سند عالي متصل إلى الإمام عاصم والإمام ابن الجزري", durationText = "6 - 12 شهر", totalHalaqat = 60, prerequisiteAr = "حفظ القرآن الكريم كاملاً وإتقان متن الجزرية", featuresAr = listOf("سند متصل معتمد", "مجلس ختم رسمي", "وثيقة إجازة مصدقة"), badgeTag = "إجازة بالسند المتصل", isOpenForRegistration = true, enrolledCount = 0),
+            Program(id = "prog_qiraat", titleAr = "الإجازة بالقراءات السبع المتواترة", titleEn = "Seven Mutawatir Qira'at Ijazah", titleAm = "የሰባቱ ተከታታይ የቁርኣን ንባቦች ኢጃዛ", descriptionAr = "برنامج الجمع والإفراد للقراءات السبع من طريق الشاطبية (حرز الأماني ووجه التهاني)، تأهيل نوعي لنخبة القراء ونيل أعلى الأسانيد المتصلة بأئمة الإقراء.", descriptionEn = "Advanced recitation of the Seven Qira'at via Ash-Shatibiyyah for verified Quranic recitation masters.", instructorName = "المقرئ الجامع الشيخ حسن علي", instructorSanad = "إجازة في القراءات العشر الكبرى والصغرى", durationText = "24 شهر", totalHalaqat = 120, prerequisiteAr = "إجازة سابقة برواية حفص وإتقان حفظ الشاطبية", featuresAr = listOf("جمع القراءات بطريقة الإفراد والجمع", "تحريرات الشاطبية", "إجازة مسندة كبرى"), badgeTag = "عالي الإسناد (تخصص)", isOpenForRegistration = true, enrolledCount = 0)
         )
     )
     val programs: StateFlow<List<Program>> = _programs.asStateFlow()
@@ -189,133 +126,13 @@ class MaqraahViewModel : ViewModel() {
     // 12. Groups
     private val _groups = MutableStateFlow(
         listOf(
-            HalqahGroup(
-                id = "grp_m_morning",
-                nameAr = "حلقات الذكور - الفترة الصباحية (الفجر والضحى)",
-                nameEn = "Brothers Halaqat - Morning Session",
-                timeSlot = GroupTimeSlot.MORNING,
-                gender = GenderCategory.BROTHERS,
-                teacherName = "المشرف العام وهيئة الإقراء",
-                currentSurah = "سورة البقرة وتصحيح التلاوة",
-                membersCount = 18,
-                isLiveNow = true,
-                liveRoomId = "room-m-morning",
-                telegramLink = null,
-                description = "حلقات مخصصة للطلاب الذكور في الفترة الصباحية المباركة من بعد صلاة الفجر إلى الضحى لمدارسة القرآن الكريم والتلقين المباشر.",
-                members = listOf(
-                    GroupMember("m1", "الشيخ د. إبراهيم أحمد", "رئيس هيئة الإقراء", true),
-                    GroupMember("m2", "المشرف العام (خالد أحمد)", "المشرف العام", true)
-                )
-            ),
-            HalqahGroup(
-                id = "grp_m_evening",
-                nameAr = "حلقات الذكور - الفترة المسائية (العصر والمغرب)",
-                nameEn = "Brothers Halaqat - Evening Session",
-                timeSlot = GroupTimeSlot.EVENING,
-                gender = GenderCategory.BROTHERS,
-                teacherName = "مشايخ الإقراء المعتمدون",
-                currentSurah = "سورة آل عمران والنساء",
-                membersCount = 15,
-                isLiveNow = false,
-                liveRoomId = "room-m-evening",
-                telegramLink = null,
-                description = "حلقات مخصصة للطلاب الذكور في الفترة المسائية بين صلاتي العصر والمغرب للمراجعة وضبط الأداء.",
-                members = listOf(
-                    GroupMember("m3", "الشيخ عبد الله محمد النور", "معلم مسند", true),
-                    GroupMember("m2", "المشرف العام (خالد أحمد)", "المشرف العام", true)
-                )
-            ),
-            HalqahGroup(
-                id = "grp_m_night",
-                nameAr = "حلقات الذكور - الفترة الليلية (العشاء والسحر)",
-                nameEn = "Brothers Halaqat - Night Session",
-                timeSlot = GroupTimeSlot.NIGHT,
-                gender = GenderCategory.BROTHERS,
-                teacherName = "مشايخ الحفظ والإجازة بالسند",
-                currentSurah = "عرض الختمات والمراجعة المكثفة",
-                membersCount = 22,
-                isLiveNow = true,
-                liveRoomId = "room-m-night",
-                telegramLink = null,
-                description = "حلقات مخصصة للطلاب الذكور في الفترة الليلية بعد صلاة العشاء وفترة السحر لعرض الختمات ونيل الإجازة بالسند.",
-                members = listOf(
-                    GroupMember("m4", "الشيخ الحافظ محمد أمين", "معلم إقراء", true),
-                    GroupMember("m2", "المشرف العام (خالد أحمد)", "المشرف العام", true)
-                )
-            ),
-            HalqahGroup(
-                id = "grp_f_morning",
-                nameAr = "حلقات الإناث - الفترة الصباحية (الفجر والضحى)",
-                nameEn = "Sisters Halaqat - Morning Session",
-                timeSlot = GroupTimeSlot.MORNING,
-                gender = GenderCategory.SISTERS,
-                teacherName = "المعلمات المسندات الفضليات",
-                currentSurah = "سورة البقرة والتلقين",
-                membersCount = 16,
-                isLiveNow = true,
-                liveRoomId = "room-f-morning",
-                telegramLink = null,
-                description = "حلقات مخصصة للأخوات والطالبات في الفترة الصباحية لتصحيح التلاوة وضبط المخارج والصفات.",
-                members = listOf(
-                    GroupMember("f1", "المعلمة أم عبد الله الحافظة", "معلمة مسندة", true),
-                    GroupMember("f2", "المشرفة التعليمية", "إشراف مقرأة الأخوات", true)
-                )
-            ),
-            HalqahGroup(
-                id = "grp_f_evening",
-                nameAr = "حلقات الإناث - الفترة المسائية (العصر والمغرب)",
-                nameEn = "Sisters Halaqat - Evening Session",
-                timeSlot = GroupTimeSlot.EVENING,
-                gender = GenderCategory.SISTERS,
-                teacherName = "المعلمات المقرئات",
-                currentSurah = "الحفظ والمراجعة",
-                membersCount = 14,
-                isLiveNow = false,
-                liveRoomId = "room-f-evening",
-                telegramLink = null,
-                description = "حلقات مخصصة للأخوات والطالبات في الفترة المسائية بين صلاتي العصر والمغرب لمتابعة الحفظ وتثبيته.",
-                members = listOf(
-                    GroupMember("f3", "المعلمة خديجة مسعود", "معلمة قرآن", true),
-                    GroupMember("f2", "المشرفة التعليمية", "إشراف مقرأة الأخوات", true)
-                )
-            ),
-            HalqahGroup(
-                id = "grp_f_night",
-                nameAr = "حلقات الإناث - الفترة الليلية (العشاء والسحر)",
-                nameEn = "Sisters Halaqat - Night Session",
-                timeSlot = GroupTimeSlot.NIGHT,
-                gender = GenderCategory.SISTERS,
-                teacherName = "نخبة المعلمات المسندات",
-                currentSurah = "عرض الختمات والإتقان",
-                membersCount = 19,
-                isLiveNow = true,
-                liveRoomId = "room-f-night",
-                telegramLink = null,
-                description = "حلقات مخصصة للأخوات والطالبات في الفترة الليلية لعرض المتون والختمات القرآنية برواية حفص وغيرها.",
-                members = listOf(
-                    GroupMember("f4", "المعلمة عائشة عمر", "معلمة إتقان", true),
-                    GroupMember("f2", "المشرفة التعليمية", "إشراف مقرأة الأخوات", true)
-                )
-            ),
-            HalqahGroup(
-                id = "grp_general",
-                nameAr = "الملتقى القرآني العام (كافة الطلاب والمعلمين)",
-                nameEn = "General Quranic Forum",
-                timeSlot = GroupTimeSlot.MORNING,
-                gender = GenderCategory.GENERAL,
-                teacherName = "إدارة المقرأة وهيئة الإقراء",
-                currentSurah = "مذاكرة أحكام التجويد والمتون والفوائد",
-                membersCount = 45,
-                isLiveNow = true,
-                liveRoomId = "room-general",
-                telegramLink = null,
-                description = "الملتقى العام الجامع لكافة منتسبي مقرأة الإمام الجزري من طلاب ومعلمين وإداريين، مخصص للفوائد العلمية ومذاكرة متون التجويد.",
-                members = listOf(
-                    GroupMember("m1", "الشيخ د. إبراهيم أحمد", "رئيس هيئة الإقراء", true),
-                    GroupMember("m2", "المشرف العام (خالد أحمد)", "المشرف العام", true),
-                    GroupMember("f1", "المعلمة أم عبد الله الحافظة", "معلمة مسندة", true)
-                )
-            )
+            HalqahGroup(id = "grp_m_morning", nameAr = "حلقات الذكور - الفترة الصباحية (الفجر والضحى)", nameEn = "Brothers Halaqat - Morning Session", timeSlot = GroupTimeSlot.MORNING, gender = GenderCategory.BROTHERS, teacherName = "المشرف العام وهيئة الإقراء", currentSurah = "سورة البقرة وتصحيح التلاوة", membersCount = 18, isLiveNow = true, liveRoomId = "room-m-morning", telegramLink = null, description = "حلقات مخصصة للطلاب الذكور في الفترة الصباحية المباركة من بعد صلاة الفجر إلى الضحى لمدارسة القرآن الكريم والتلقين المباشر.", members = listOf(GroupMember("m1", "الشيخ د. إبراهيم أحمد", "رئيس هيئة الإقراء", true), GroupMember("m2", "المشرف العام (خالد أحمد)", "المشرف العام", true))),
+            HalqahGroup(id = "grp_m_evening", nameAr = "حلقات الذكور - الفترة المسائية (العصر والمغرب)", nameEn = "Brothers Halaqat - Evening Session", timeSlot = GroupTimeSlot.EVENING, gender = GenderCategory.BROTHERS, teacherName = "مشايخ الإقراء المعتمدون", currentSurah = "سورة آل عمران والنساء", membersCount = 15, isLiveNow = false, liveRoomId = "room-m-evening", telegramLink = null, description = "حلقات مخصصة للطلاب الذكور في الفترة المسائية بين صلاتي العصر والمغرب للمراجعة وضبط الأداء.", members = listOf(GroupMember("m3", "الشيخ عبد الله محمد النور", "معلم مسند", true), GroupMember("m2", "المشرف العام (خالد أحمد)", "المشرف العام", true))),
+            HalqahGroup(id = "grp_m_night", nameAr = "حلقات الذكور - الفترة الليلية (العشاء والسحر)", nameEn = "Brothers Halaqat - Night Session", timeSlot = GroupTimeSlot.NIGHT, gender = GenderCategory.BROTHERS, teacherName = "مشايخ الحفظ والإجازة بالسند", currentSurah = "عرض الختمات والمراجعة المكثفة", membersCount = 22, isLiveNow = true, liveRoomId = "room-m-night", telegramLink = null, description = "حلقات مخصصة للطلاب الذكور في الفترة الليلية بعد صلاة العشاء وفترة السحر لعرض الختمات ونيل الإجازة بالسند.", members = listOf(GroupMember("m4", "الشيخ الحافظ محمد أمين", "معلم إقراء", true), GroupMember("m2", "المشرف العام (خالد أحمد)", "المشرف العام", true))),
+            HalqahGroup(id = "grp_f_morning", nameAr = "حلقات الإناث - الفترة الصباحية (الفجر والضحى)", nameEn = "Sisters Halaqat - Morning Session", timeSlot = GroupTimeSlot.MORNING, gender = GenderCategory.SISTERS, teacherName = "المعلمات المسندات الفضليات", currentSurah = "سورة البقرة والتلقين", membersCount = 16, isLiveNow = true, liveRoomId = "room-f-morning", telegramLink = null, description = "حلقات مخصصة للأخوات والطالبات في الفترة الصباحية لتصحيح التلاوة وضبط المخارج والصفات.", members = listOf(GroupMember("f1", "المعلمة أم عبد الله الحافظة", "معلمة مسندة", true), GroupMember("f2", "المشرفة التعليمية", "إشراف مقرأة الأخوات", true))),
+            HalqahGroup(id = "grp_f_evening", nameAr = "حلقات الإناث - الفترة المسائية (العصر والمغرب)", nameEn = "Sisters Halaqat - Evening Session", timeSlot = GroupTimeSlot.EVENING, gender = GenderCategory.SISTERS, teacherName = "المعلمات المقرئات", currentSurah = "الحفظ والمراجعة", membersCount = 14, isLiveNow = false, liveRoomId = "room-f-evening", telegramLink = null, description = "حلقات مخصصة للأخوات والطالبات في الفترة المسائية بين صلاتي العصر والمغرب لمتابعة الحفظ وتثبيته.", members = listOf(GroupMember("f3", "المعلمة خديجة مسعود", "معلمة قرآن", true), GroupMember("f2", "المشرفة التعليمية", "إشراف مقرأة الأخوات", true))),
+            HalqahGroup(id = "grp_f_night", nameAr = "حلقات الإناث - الفترة الليلية (العشاء والسحر)", nameEn = "Sisters Halaqat - Night Session", timeSlot = GroupTimeSlot.NIGHT, gender = GenderCategory.SISTERS, teacherName = "نخبة المعلمات المسندات", currentSurah = "عرض الختمات والإتقان", membersCount = 19, isLiveNow = true, liveRoomId = "room-f-night", telegramLink = null, description = "حلقات مخصصة للأخوات والطالبات في الفترة الليلية لعرض المتون والختمات القرآنية برواية حفص وغيرها.", members = listOf(GroupMember("f4", "المعلمة عائشة عمر", "معلمة إتقان", true), GroupMember("f2", "المشرفة التعليمية", "إشراف مقرأة الأخوات", true))),
+            HalqahGroup(id = "grp_general", nameAr = "الملتقى القرآني العام (كافة الطلاب والمعلمين)", nameEn = "General Quranic Forum", timeSlot = GroupTimeSlot.MORNING, gender = GenderCategory.GENERAL, teacherName = "إدارة المقرأة وهيئة الإقراء", currentSurah = "مذاكرة أحكام التجويد والمتون والفوائد", membersCount = 45, isLiveNow = true, liveRoomId = "room-general", telegramLink = null, description = "الملتقى العام الجامع لكافة منتسبي مقرأة الإمام الجزري من طلاب ومعلمين وإداريين، مخصص للفوائد العلمية ومذاكرة متون التجويد.", members = listOf(GroupMember("m1", "الشيخ د. إبراهيم أحمد", "رئيس هيئة الإقراء", true), GroupMember("m2", "المشرف العام (خالد أحمد)", "المشرف العام", true), GroupMember("f1", "المعلمة أم عبد الله الحافظة", "معلمة مسندة", true)))
         )
     )
     val groups: StateFlow<List<HalqahGroup>> = _groups.asStateFlow()
@@ -327,30 +144,8 @@ class MaqraahViewModel : ViewModel() {
     // 14. Conversations & Messages
     private val _conversations = MutableStateFlow(
         listOf(
-            Conversation(
-                id = "conv_admin",
-                participantName = "الحساب الرسمي للمقرأة والإشراف",
-                participantRole = "إدارة المقرأة",
-                participantCode = "HQ-001",
-                participantBio = "الحساب المعتمد لمقرأة الإمام الجزري لخدمة الطلاب ومتابعة التسجيل والدعم الفني",
-                lastMessage = "السلام عليكم ورحمة الله، تم تفعيل اشتراكك وجدول حلقات التسميع",
-                lastMessageTime = "10:45 ص",
-                unreadCount = 1,
-                isOfficial = true,
-                enrolledPrograms = listOf("الإدارة العامة", "هيئة الإقراء")
-            ),
-            Conversation(
-                id = "conv_sheikh_ibrahim",
-                participantName = "الشيخ د. إبراهيم أحمد",
-                participantRole = "مقرئ مجاز - رئيس هيئة الإقراء",
-                participantCode = "TCH-102",
-                participantBio = "مسند في القراءات العشر الكبرى والصغرى ومشرف برنامج إجازة حفص",
-                lastMessage = "السلام عليكم ورحمة الله، موعدنا في حلقة التسميع القادمة بإذن الله تعالى",
-                lastMessageTime = "أمس",
-                unreadCount = 0,
-                isOfficial = false,
-                enrolledPrograms = listOf("الإجازة برواية حفص عن عاصم")
-            )
+            Conversation(id = "conv_admin", participantName = "الحساب الرسمي للمقرأة والإشراف", participantRole = "إدارة المقرأة", participantCode = "HQ-001", participantBio = "الحساب المعتمد لمقرأة الإمام الجزري لخدمة الطلاب ومتابعة التسجيل والدعم الفني", lastMessage = "السلام عليكم ورحمة الله، تم تفعيل اشتراكك وجدول حلقات التسميع", lastMessageTime = "10:45 ص", unreadCount = 1, isOfficial = true, enrolledPrograms = listOf("الإدارة العامة", "هيئة الإقراء")),
+            Conversation(id = "conv_sheikh_ibrahim", participantName = "الشيخ د. إبراهيم أحمد", participantRole = "مقرئ مجاز - رئيس هيئة الإقراء", participantCode = "TCH-102", participantBio = "مسند في القراءات العشر الكبرى والصغرى ومشرف برنامج إجازة حفص", lastMessage = "السلام عليكم ورحمة الله، موعدنا في حلقة التسميع القادمة بإذن الله تعالى", lastMessageTime = "أمس", unreadCount = 0, isOfficial = false, enrolledPrograms = listOf("الإجازة برواية حفص عن عاصم"))
         )
     )
     val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
@@ -374,12 +169,9 @@ class MaqraahViewModel : ViewModel() {
     fun isAdminEmail(email: String?): Boolean {
         if (email.isNullOrBlank()) return false
         val clean = email.trim().lowercase()
-        return clean == "meqraahaljezery@gmail.com" ||
-                clean == "khdahd241@gmail.com" ||
-                clean == "admin@aljazari.org"
+        return clean == "meqraahaljezery@gmail.com" || clean == "khdahd241@gmail.com" || clean == "admin@aljazari.org"
     }
 
-    // ✅ الدالة المعدلة لحل مشكلة الدخول
     fun registerOrSignInStudent(
         email: String,
         name: String,
@@ -410,7 +202,7 @@ class MaqraahViewModel : ViewModel() {
                                 handleUserSession(createTask.result?.user?.uid, cleanEmail, displayName, role, phone, gender, targetProgram, isAdmin)
                             } else {
                                 Log.e("FIREBASE_ERROR", "Auth failed: ${createTask.exception?.message}")
-                                _isLoadingAuth.value = false
+                                _isLoadingAuth.value = false 
                             }
                         }
                 }
@@ -427,7 +219,11 @@ class MaqraahViewModel : ViewModel() {
         targetProgram: String,
         isAdmin: Boolean
     ) {
-        if (userId == null) return
+        if (userId == null) {
+            _isLoadingAuth.value = false
+            return
+        }
+        
         val userDocRef = db.collection("users").document(userId)
         
         userDocRef.get().addOnCompleteListener { docTask ->
@@ -464,53 +260,17 @@ class MaqraahViewModel : ViewModel() {
                             _isLoadingAuth.value = false
                             
                             if (role == UserRole.STUDENT) {
-                                val existingIndex = _students.value.indexOfFirst { it.email.equals(newUser.email, ignoreCase = true) }
-                                if (existingIndex >= 0) {
-                                    val updated = _students.value.toMutableList()
-                                    updated[existingIndex] = newUser
-                                    _students.value = updated
-                                } else {
-                                    _students.value = listOf(newUser) + _students.value
-                                }
-
-                                val enrollmentReq = EnrollmentRequest(
-                                    id = "enr_${UUID.randomUUID().toString().take(6)}",
-                                    studentId = newUser.id,
-                                    studentName = newUser.name,
-                                    studentCode = newUser.studentCode,
-                                    programId = "prog_auto",
-                                    programTitle = targetProgram,
-                                    age = 22,
-                                    gender = gender,
-                                    city = "مسجل عبر الاستمارة",
-                                    contactPhone = newUser.phone,
-                                    currentMemorization = "مسجل جديد",
-                                    previousExperience = "تم التسجيل عبر استمارة المقرأة",
-                                    preferredTimeSlot = "حسب توفر الحلقات",
-                                    status = "PENDING",
-                                    submittedAt = dateFormat.format(Date())
-                                )
-                                _enrollmentRequests.value = listOf(enrollmentReq) + _enrollmentRequests.value
-
-                                val notif = AppNotification(
-                                    id = "notif_${System.currentTimeMillis()}",
-                                    title = "تم استلام استمارة التسجيل",
-                                    message = "أهلاً بك يا ${newUser.name} في مقرأة الإمام الجزري، تم إرسال ملفك للإدارة العامة للمراجعة والاعتماد.",
-                                    date = dateFormat.format(Date()),
-                                    type = "REGISTRATION",
-                                    isRead = false
-                                )
-                                _notifications.value = listOf(notif) + _notifications.value
+                                _students.value = listOf(newUser) + _students.value
                             }
                         } else {
                             Log.e("FIREBASE_ERROR", "Set error: ${setTask.exception?.message}")
-                            _isLoadingAuth.value = false
+                            _isLoadingAuth.value = false 
                         }
                     }
                 }
             } else {
                 Log.e("FIREBASE_ERROR", "Fetch error: ${docTask.exception?.message}")
-                _isLoadingAuth.value = false
+                _isLoadingAuth.value = false 
             }
         }
     }
@@ -565,16 +325,6 @@ class MaqraahViewModel : ViewModel() {
             submittedAt = dateFormat.format(Date())
         )
         _enrollmentRequests.value = listOf(newRequest) + _enrollmentRequests.value
-
-        val notif = AppNotification(
-            id = "notif_${UUID.randomUUID().toString().take(6)}",
-            title = "تم استلام طلب التسجيل",
-            message = "تم تسجيل طلب التحاقك ببرنامج (${program.titleAr}) بنجاح، وهو قيد المراجعة والاعتماد لدى المشرف العام.",
-            date = dateFormat.format(Date()),
-            type = "ENROLLMENT",
-            isRead = false
-        )
-        _notifications.value = listOf(notif) + _notifications.value
         return true
     }
 
@@ -582,17 +332,6 @@ class MaqraahViewModel : ViewModel() {
         val req = _enrollmentRequests.value.find { it.id == requestId }
         _enrollmentRequests.value = _enrollmentRequests.value.map {
             if (it.id == requestId) it.copy(status = "APPROVED") else it
-        }
-        if (req != null) {
-            val notif = AppNotification(
-                id = "notif_${UUID.randomUUID().toString().take(6)}",
-                title = "تم قبول طلب التسجيل في البرنامج",
-                message = "مبارك! تم اعتماد طلبك للالتحاق ببرنامج (${req.programTitle}) بإشراف المقرأة.",
-                date = dateFormat.format(Date()),
-                type = "ENROLLMENT",
-                isRead = false
-            )
-            _notifications.value = listOf(notif) + _notifications.value
         }
     }
 
@@ -629,16 +368,6 @@ class MaqraahViewModel : ViewModel() {
             isArchived = false
         )
         _paymentRequests.value = listOf(newPayment) + _paymentRequests.value
-
-        val notif = AppNotification(
-            id = "notif_${UUID.randomUUID().toString().take(6)}",
-            title = "تم إرسال إشعار شحن الرصيد",
-            message = "تم تسجيل إشعار تحويل باقة ${pkg.titleAr} (${pkg.minutes} دقيقة) برقم عملية $transactionRef وصورة الإيصال بنجاح وهو قيد المراجعة.",
-            date = dateFormat.format(Date()),
-            type = "RECHARGE",
-            isRead = false
-        )
-        _notifications.value = listOf(notif) + _notifications.value
         return true
     }
 
@@ -672,21 +401,11 @@ class MaqraahViewModel : ViewModel() {
             balanceBefore = before,
             balanceAfter = after,
             type = LedgerEntryType.DEPOSIT_PAYMENT,
-            reason = "اعتماد شحن باقة ${payment.packageMinutes} دقيقة - حوالة بنك ${payment.targetBank} رقم ${payment.transactionRef}",
+            reason = "اعتماد شحن باقة ${payment.packageMinutes} دقيقة",
             timestamp = dateFormat.format(Date()),
-            actorName = "المشرف العام (خالد أحمد)"
+            actorName = "المشرف العام"
         )
         _creditLedger.value = listOf(ledgerEntry) + _creditLedger.value
-
-        val notif = AppNotification(
-            id = "notif_${UUID.randomUUID().toString().take(6)}",
-            title = "تم شحن الرصيد بنجاح",
-            message = "تم اعتماد تحويلك وإضافة ${payment.packageMinutes} دقيقة إلى رصيدك. رصيدك الحالي: $after دقيقة.",
-            date = dateFormat.format(Date()),
-            type = "RECHARGE",
-            isRead = false
-        )
-        _notifications.value = listOf(notif) + _notifications.value
     }
 
     fun rejectPayment(paymentId: String, reason: String) {
@@ -709,32 +428,12 @@ class MaqraahViewModel : ViewModel() {
         _students.value = _students.value.map {
             if (it.id == studentId) it.copy(isSuspended = false) else it
         }
-        val target = _students.value.find { it.id == studentId }
-        val notif = AppNotification(
-            id = "notif_${UUID.randomUUID().toString().take(6)}",
-            title = "تم تفعيل الحساب",
-            message = "تمت إعادة تفعيل حساب الطالب (${target?.name ?: ""}) في المقرأة بنجاح.",
-            date = dateFormat.format(Date()),
-            type = "SYSTEM",
-            isRead = false
-        )
-        _notifications.value = listOf(notif) + _notifications.value
     }
 
     fun suspendStudent(studentId: String) {
         _students.value = _students.value.map {
             if (it.id == studentId) it.copy(isSuspended = true) else it
         }
-        val target = _students.value.find { it.id == studentId }
-        val notif = AppNotification(
-            id = "notif_${UUID.randomUUID().toString().take(6)}",
-            title = "تنبيه إداري: تجميد الحساب",
-            message = "تم تجميد حساب الطالب (${target?.name ?: ""}) مؤقتاً لمراجعة الالتزام بالحلقات.",
-            date = dateFormat.format(Date()),
-            type = "SYSTEM",
-            isRead = false
-        )
-        _notifications.value = listOf(notif) + _notifications.value
     }
 
     fun deleteStudent(studentId: String) {
@@ -770,27 +469,17 @@ class MaqraahViewModel : ViewModel() {
             balanceBefore = beforeBal,
             balanceAfter = afterBal,
             type = LedgerEntryType.HONOR_AWARD,
-            reason = "تكريم ومنح دقائق إضافية: $reason",
+            reason = "تكريم: $reason",
             timestamp = dateFormat.format(Date()),
-            actorName = "المشرف العام (خالد أحمد)"
+            actorName = "المشرف العام"
         )
         _creditLedger.value = listOf(ledgerEntry) + _creditLedger.value
-
-        val notif = AppNotification(
-            id = "notif_${UUID.randomUUID().toString().take(6)}",
-            title = "تكريم: تمت إضافة $minutes دقيقة لرصيدك",
-            message = "منحك المشرف العام $minutes دقيقة إضافية تقديراً لاجتهادك. السبب: $reason. رصيدك الحالي: $afterBal دقيقة.",
-            date = dateFormat.format(Date()),
-            type = "RECHARGE",
-            isRead = false
-        )
-        _notifications.value = listOf(notif) + _notifications.value
     }
 
     fun sendStudentAlert(studentId: String, alertMessage: String) {
         val notif = AppNotification(
             id = "notif_${UUID.randomUUID().toString().take(6)}",
-            title = "تنبيه إداري من إدارة المقرأة",
+            title = "تنبيه إداري",
             message = alertMessage,
             date = dateFormat.format(Date()),
             type = "SYSTEM",
@@ -831,21 +520,11 @@ class MaqraahViewModel : ViewModel() {
             balanceBefore = before,
             balanceAfter = after,
             type = LedgerEntryType.DEDUCTION_SESSION,
-            reason = "جلسة تسميع قرآن: $recitationSpan ($minutes دقيقة) - ملاحظات الأداء: ${tajweedNotes.ifBlank { "أداء متقن" }}",
+            reason = "جلسة تسميع: $recitationSpan",
             timestamp = dateFormat.format(Date()),
-            actorName = "المقرئ المجاز"
+            actorName = "المقرئ"
         )
         _creditLedger.value = listOf(ledgerEntry) + _creditLedger.value
-
-        val notif = AppNotification(
-            id = "notif_${UUID.randomUUID().toString().take(6)}",
-            title = "تم تسجيل جلسة تسميع وخصم $minutes دقيقة",
-            message = "تم خصم $minutes دقيقة لجلسة تسميع ($recitationSpan). رصيدك المتبقي: $after دقيقة. ملاحظات الشيخ: ${tajweedNotes.ifBlank { "ممتاز وبارك الله فيك" }}.",
-            date = dateFormat.format(Date()),
-            type = "SESSION",
-            isRead = false
-        )
-        _notifications.value = listOf(notif) + _notifications.value
         return true
     }
 
@@ -866,22 +545,12 @@ class MaqraahViewModel : ViewModel() {
             content = content,
             date = dateFormat.format(Date()).substringBefore(" "),
             isPinned = isPinned,
-            author = "المشرف العام (خالد أحمد مصطفى)"
+            author = "المشرف العام"
         )
         _announcements.value = listOf(newAnc) + _announcements.value
-
-        val notif = AppNotification(
-            id = "notif_${UUID.randomUUID().toString().take(6)}",
-            title = "إعلان رسمي جديد: $title",
-            message = content,
-            date = dateFormat.format(Date()),
-            type = "ANNOUNCEMENT",
-            isRead = false
-        )
-        _notifications.value = listOf(notif) + _notifications.value
     }
 
-    fun publishQuranPost(content: String, authorRole: String = "إدارة المقرأة وهيئة الإقراء") {
+    fun publishQuranPost(content: String, authorRole: String = "إدارة المقرأة") {
         val newPost = QuranPost(
             id = "post_${UUID.randomUUID().toString().take(6)}",
             authorName = "مقرأة الإمام الجزري",
@@ -902,20 +571,6 @@ class MaqraahViewModel : ViewModel() {
         val updatedUser = user.copy(minuteBalance = after)
         _currentUser.value = updatedUser
         db.collection("users").document(user.id).set(updatedUser)
-
-        val entry = MinuteLedgerEntry(
-            id = "led_${UUID.randomUUID().toString().take(6)}",
-            studentId = user.id,
-            studentName = studentName,
-            changeAmount = amount,
-            balanceBefore = before,
-            balanceAfter = after,
-            type = LedgerEntryType.MANUAL_ADJUSTMENT_ADMIN,
-            reason = reason,
-            timestamp = dateFormat.format(Date()),
-            actorName = "المشرف العام"
-        )
-        _creditLedger.value = listOf(entry) + _creditLedger.value
     }
 
     fun toggleLikePost(postId: String) {
@@ -1253,7 +908,7 @@ class MaqraahViewModel : ViewModel() {
             balanceBefore = oldBalance,
             balanceAfter = newBalance,
             type = LedgerEntryType.DEDUCTION_SESSION,
-            reason = "خصم تلقائي دقيق: جلسة تسميع مشافهة مباشرة (${durationSeconds} ثانية) لـ ${session.surahName}. ${notes.ifBlank { "تقبل الله" }}",
+            reason = "خصم تلقائي دقيق: جلسة تسميع مشافهة مباشرة (${durationSeconds} ثانية)",
             timestamp = dateFormat.format(Date()),
             actorName = user.name
         )
@@ -1286,7 +941,7 @@ class MaqraahViewModel : ViewModel() {
 
         sendSystemGroupMessage(
             groupId,
-            "✅ تم إنهاء جلسة التسميع للطالب (${session.studentName}). مدة القراءة: ${durationSeconds} ثانية ($exactDeductedMinutes دقيقة). تم خصمها بدقة وتوثيقها في السجل."
+            "✅ تم إنهاء جلسة التسميع للطالب (${session.studentName}). مدة القراءة: ${durationSeconds} ثانية ($exactDeductedMinutes دقيقة)."
         )
     }
 }

@@ -45,7 +45,6 @@ fun AppNavigation(
     val navController = rememberNavController()
     var currentLanguage by remember { mutableStateOf(AppLanguage.ARABIC) }
 
-    // طلب إذن الإشعارات
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -66,17 +65,16 @@ fun AppNavigation(
     val currentUser by maqraahViewModel.currentUser.collectAsState()
     val isLoadingAuth by maqraahViewModel.isLoadingAuth.collectAsState()
 
-    var showUnauthorizedAdminDialog by remember { mutableStateOf(false) }
-
-    // الحل الجذري: مراقبة حالة الدخول والتوجيه التلقائي
+    // ✅ التوجيه التلقائي فور نجاح تسجيل الدخول
     LaunchedEffect(currentUser, isLoadingAuth) {
         if (!isLoadingAuth && currentUser != null) {
-            // المستخدم مسجل دخول بنجاح، انتقل للرئيسية وتخلص من شاشة الدخول
             navController.navigate(Screen.Home.route) {
                 popUpTo(Screen.Auth.route) { inclusive = true }
             }
         }
     }
+
+    var showUnauthorizedAdminDialog by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(LocalLayoutDirection provides currentLanguage.layoutDirection) {
 
@@ -103,7 +101,13 @@ fun AppNavigation(
             AuthScreen(
                 currentLanguage = currentLanguage,
                 onSignIn = { email, name, phone, gender, program ->
-                    maqraahViewModel.registerOrSignInStudent(email, name, phone, gender, program)
+                    maqraahViewModel.registerOrSignInStudent(
+                        email = email,
+                        name = name,
+                        phone = phone,
+                        gender = gender,
+                        targetProgram = program
+                    )
                     if (maqraahViewModel.isAdminEmail(email)) {
                         SmartNotificationManager.notifyAdminNewStudent(context, name, program)
                     } else {
@@ -114,7 +118,7 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 4. الواجهة الرئيسية (للمستخدم المسجل)
+        // 4. واجهة التطبيق (للمستخدم المسجل)
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 

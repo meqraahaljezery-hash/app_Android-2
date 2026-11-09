@@ -61,7 +61,7 @@ class MaqraahViewModel : ViewModel() {
         }
     }
 
-    // 4. Official Quran Programs
+    // 4. Official Quran Programs (4 Core Programs)
     private val _programs = MutableStateFlow(
         listOf(
             Program(id = "prog_talqin", titleAr = "التلقين وتصحيح الأداء", titleEn = "Talqin & Recitation Correction", titleAm = "የቁርኣን ንባብ እና አነባበብ ማስተካከያ", descriptionAr = "حلقات يومية مباشرة تركز على تصحيح مخارج الحروف، وضبط أزمنة الغنن والمدود، والمشافهة المباشرة مع المشايخ المسندين لتأسيس القراءة السليمة الخالية من اللحن.", descriptionEn = "Daily live halaqat focusing on articulation points, Tajweed precision, and oral transmission with certified scholars.", instructorName = "الشيخ عبد الله محمد النور", instructorSanad = "مسند في القراءات العشر ومتون التجويد", durationText = "3 أشهر (24 حلقة تفاعلية)", totalHalaqat = 24, prerequisiteAr = "الرغبة في تصحيح التلاوة ومعرفة القراءة الأساسية", featuresAr = listOf("تسميع فردي وتصحيح مباشر", "متابعة أسبوعية في المتون", "شهادة إتمام مستوى"), badgeTag = "تأسيسي وإتقان", isOpenForRegistration = true, enrolledCount = 0),
@@ -80,6 +80,7 @@ class MaqraahViewModel : ViewModel() {
     private val _minutePackages = MutableStateFlow(
         listOf(
             MinutePackage("pkg_1", "الفضية العادية", "Silver Package", 100, 500, false, listOf("100 دقيقة تسميع", "صلاحية 30 يوم", "دخول الحلقات العامة")),
+            // هنا الباقة الذهبية: 200 دقيقة، السعر 1000 (يمكنك تغيير 200 إلى 1200 إذا كنت تقصد الدقائق)
             MinutePackage("pkg_2", "الذهبية", "Gold Package", 200, 1000, true, listOf("200 دقيقة تسميع", "صلاحية 60 يوم", "تسميع فردي مباشر")),
             MinutePackage("pkg_3", "المتميزة", "Premium Package", 300, 1470, false, listOf("300 دقيقة تسميع", "صلاحية 90 يوم", "متابعة أسبوعية في الحفظ")),
             MinutePackage("pkg_4", "النخبة", "Elite Package", 400, 1920, false, listOf("400 دقيقة تسميع", "صلاحية 90 يوم", "أولوية في طابور التسميع")),
@@ -121,7 +122,7 @@ class MaqraahViewModel : ViewModel() {
     private val _notifications = MutableStateFlow<List<AppNotification>>(emptyList())
     val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
-    // 13. Groups (تم إبقاء القائمة الفارغة هنا لأننا سنعتمد على Firebase لاحقاً، لكن يمكنك ترك القائمة القديمة إن أردت)
+    // 13. Groups (مفرغة لتكون حقيقية)
     private val _groups = MutableStateFlow<List<HalqahGroup>>(emptyList())
     val groups: StateFlow<List<HalqahGroup>> = _groups.asStateFlow()
 
@@ -165,12 +166,11 @@ class MaqraahViewModel : ViewModel() {
             else -> "طالب المقرأة"
         }
 
-        // كلمة مرور افتراضية (لأن الواجهة الحالية لا تطلب كلمة مرور)
-        val dummyPassword = "123456"
+        val dummyPassword = "123456" // كلمة مرور وهمية لتسهيل الدخول عبر الواجهة الحالية
 
         auth.signInWithEmailAndPassword(cleanEmail, dummyPassword)
             .addOnFailureListener {
-                // إذا لم يكن الحساب موجوداً، نقوم بإنشائه
+                // إنشاء حساب جديد إذا لم يكن موجوداً
                 auth.createUserWithEmailAndPassword(cleanEmail, dummyPassword)
             }
             .addOnCompleteListener { task ->
@@ -178,7 +178,7 @@ class MaqraahViewModel : ViewModel() {
                     val firebaseUser = auth.currentUser
                     val userId = firebaseUser?.uid ?: UUID.randomUUID().toString()
 
-                    // جلب بيانات المستخدم إذا كان موجوداً مسبقاً في قاعدة البيانات، أو إنشاء جديد
+                    // جلب بيانات المستخدم من قاعدة البيانات
                     db.collection("users").document(userId).get().addOnSuccessListener { doc ->
                         if (doc.exists()) {
                             _currentUser.value = doc.toObject(User::class.java)
@@ -193,7 +193,8 @@ class MaqraahViewModel : ViewModel() {
                                 studentCode = if (isAdmin) "ADM-001" else "JZR-${(1000..9999).random()}",
                                 phone = if (phone.isNotBlank()) phone.trim() else (if (isAdmin) "+251 990 161 372" else "+251 912 000 000"),
                                 gender = gender,
-                                minuteBalance = if (isAdmin) 1000 else 0, // الرصيد يبدأ بصفر للطالب
+                                // ⚠️ هنا الرصيد الافتراضي. يمكنك تغيير 1000 للمدير أو 60 للطالب
+                                minuteBalance = if (isAdmin) 1000 else 60, 
                                 tajweedLevel = if (isAdmin) "مقرئ مسند بالقراءات العشر" else "طالب مسجل جديد",
                                 sanadTrack = if (isAdmin) "إشراف هيئة الإقراء والسند" else targetProgram,
                                 bio = if (isAdmin) "الحساب الإداري الرسمي لمقرأة الإمام الجزري للإقراء والإجازة بالسند المتصل" else "طالب علم في $targetProgram"
@@ -209,6 +210,10 @@ class MaqraahViewModel : ViewModel() {
             }
     }
 
+    fun signInWithGoogle(email: String, name: String) {
+        registerOrSignInStudent(email, name)
+    }
+
     fun signOut() {
         auth.signOut()
         _currentUser.value = null
@@ -221,7 +226,42 @@ class MaqraahViewModel : ViewModel() {
         db.collection("users").document(current.id).set(updatedUser)
     }
 
-    // --- العمليات المالية (Payment & Ledger) ---
+    fun submitEnrollmentRequest(program: Program, age: Int, gender: String, city: String, phone: String, memorization: String, experience: String, timeSlot: String): Boolean {
+        val user = _currentUser.value ?: return false
+        val hasConflicting = _enrollmentRequests.value.any { it.studentId == user.id && it.programId == program.id && it.status != "REJECTED" }
+        if (hasConflicting) return false
+
+        val newRequest = EnrollmentRequest(id = "enr_${UUID.randomUUID().toString().take(6)}", studentId = user.id, studentName = user.name, studentCode = user.studentCode, programId = program.id, programTitle = program.titleAr, age = age, gender = gender, city = city, contactPhone = phone, currentMemorization = memorization, previousExperience = experience, preferredTimeSlot = timeSlot, status = "PENDING", submittedAt = dateFormat.format(Date()))
+        _enrollmentRequests.value = listOf(newRequest) + _enrollmentRequests.value
+
+        val notif = AppNotification(id = "notif_${UUID.randomUUID().toString().take(6)}", title = "تم استلام طلب التسجيل", message = "تم تسجيل طلب التحاقك ببرنامج (${program.titleAr}) بنجاح، وهو قيد المراجعة والاعتماد.", date = dateFormat.format(Date()), type = "ENROLLMENT", isRead = false)
+        _notifications.value = listOf(notif) + _notifications.value
+        return true
+    }
+
+    fun approveEnrollment(requestId: String) {
+        val req = _enrollmentRequests.value.find { it.id == requestId }
+        _enrollmentRequests.value = _enrollmentRequests.value.map { if (it.id == requestId) it.copy(status = "APPROVED") else it }
+        if (req != null) {
+            val notif = AppNotification(id = "notif_${UUID.randomUUID().toString().take(6)}", title = "تم قبول طلب التسجيل", message = "مبارك! تم اعتماد طلبك للالتحاق ببرنامج (${req.programTitle}).", date = dateFormat.format(Date()), type = "ENROLLMENT", isRead = false)
+            _notifications.value = listOf(notif) + _notifications.value
+        }
+    }
+
+    fun rejectEnrollment(requestId: String, reason: String) {
+        _enrollmentRequests.value = _enrollmentRequests.value.map { if (it.id == requestId) it.copy(status = "REJECTED", rejectionReason = reason) else it }
+    }
+
+    fun submitPaymentRequest(pkg: MinutePackage, targetBank: String, senderName: String, senderPhone: String, transactionRef: String, receiptUri: String? = null): Boolean {
+        val user = _currentUser.value ?: return false
+        val newPayment = PaymentRequest(id = "pay_${UUID.randomUUID().toString().take(6)}", studentId = user.id, studentName = user.name, studentCode = user.studentCode, senderFullName = senderName, transactionRef = transactionRef, senderPhoneNumber = senderPhone, targetBank = targetBank, packageMinutes = pkg.minutes, amountPaidEtb = pkg.priceEtb, status = PaymentStatus.PENDING, submittedAt = dateFormat.format(Date()), receiptUri = receiptUri, isDownloaded = false, isArchived = false)
+        _paymentRequests.value = listOf(newPayment) + _paymentRequests.value
+
+        val notif = AppNotification(id = "notif_${UUID.randomUUID().toString().take(6)}", title = "تم إرسال إشعار شحن الرصيد", message = "تم تسجيل إشعار تحويل باقة ${pkg.titleAr} (${pkg.minutes} دقيقة) برقم عملية $transactionRef.", date = dateFormat.format(Date()), type = "RECHARGE", isRead = false)
+        _notifications.value = listOf(notif) + _notifications.value
+        return true
+    }
+
     fun approvePayment(paymentId: String) {
         val payment = _paymentRequests.value.find { it.id == paymentId } ?: return
         if (payment.status == PaymentStatus.APPROVED) return
@@ -240,22 +280,136 @@ class MaqraahViewModel : ViewModel() {
             db.collection("users").document(user.id).set(updatedUser)
         }
 
-        val ledgerEntry = MinuteLedgerEntry(
-            id = "led_${UUID.randomUUID().toString().take(6)}", studentId = payment.studentId, studentName = payment.studentName,
-            changeAmount = payment.packageMinutes, balanceBefore = before, balanceAfter = after,
-            type = LedgerEntryType.DEPOSIT_PAYMENT, reason = "اعتماد شحن باقة ${payment.packageMinutes} دقيقة",
-            timestamp = dateFormat.format(Date()), actorName = "المشرف العام"
-        )
+        val ledgerEntry = MinuteLedgerEntry(id = "led_${UUID.randomUUID().toString().take(6)}", studentId = payment.studentId, studentName = payment.studentName, changeAmount = payment.packageMinutes, balanceBefore = before, balanceAfter = after, type = LedgerEntryType.DEPOSIT_PAYMENT, reason = "اعتماد شحن باقة ${payment.packageMinutes} دقيقة", timestamp = dateFormat.format(Date()), actorName = "المشرف العام")
         _creditLedger.value = listOf(ledgerEntry) + _creditLedger.value
     }
 
-    // (باقي الدوال مثل البث والمحادثات سأضعها هنا بشكل مختصر لضمان عمل الملف)
+    fun rejectPayment(paymentId: String, reason: String) {
+        _paymentRequests.value = _paymentRequests.value.map { if (it.id == paymentId) it.copy(status = PaymentStatus.REJECTED, rejectionReason = reason, reviewedByAdmin = "خالد أحمد مصطفى") else it }
+    }
+
+    fun markPaymentReceiptDownloaded(paymentId: String) {
+        _paymentRequests.value = _paymentRequests.value.map { if (it.id == paymentId) it.copy(isDownloaded = true) else it }
+    }
+
+    fun deletePaymentRequest(paymentId: String) {
+        _paymentRequests.value = _paymentRequests.value.filter { it.id != paymentId }
+    }
+
+    fun activateStudent(studentId: String) {
+        _students.value = _students.value.map { if (it.id == studentId) it.copy(isSuspended = false) else it }
+    }
+
+    fun suspendStudent(studentId: String) {
+        _students.value = _students.value.map { if (it.id == studentId) it.copy(isSuspended = true) else it }
+    }
+
+    fun deleteStudent(studentId: String) {
+        _students.value = _students.value.filter { it.id != studentId }
+    }
+
+    fun awardMinutesToStudent(studentId: String, minutes: Int, reason: String) {
+        var studentName = "الطالب"
+        var beforeBal = 0
+        var afterBal = 0
+        _students.value = _students.value.map {
+            if (it.id == studentId) {
+                studentName = it.name
+                beforeBal = it.minuteBalance
+                afterBal = beforeBal + minutes
+                it.copy(minuteBalance = afterBal)
+            } else it
+        }
+
+        if (_currentUser.value?.id == studentId) {
+            val updatedUser = _currentUser.value?.copy(minuteBalance = afterBal)
+            _currentUser.value = updatedUser
+            if (updatedUser != null) {
+                db.collection("users").document(updatedUser.id).set(updatedUser)
+            }
+        }
+
+        val ledgerEntry = MinuteLedgerEntry(id = "led_${UUID.randomUUID().toString().take(6)}", studentId = studentId, studentName = studentName, changeAmount = minutes, balanceBefore = beforeBal, balanceAfter = afterBal, type = LedgerEntryType.HONOR_AWARD, reason = "تكريم: $reason", timestamp = dateFormat.format(Date()), actorName = "المشرف العام")
+        _creditLedger.value = listOf(ledgerEntry) + _creditLedger.value
+    }
+
+    fun sendStudentAlert(studentId: String, alertMessage: String) {
+        val notif = AppNotification(id = "notif_${UUID.randomUUID().toString().take(6)}", title = "تنبيه إداري", message = alertMessage, date = dateFormat.format(Date()), type = "SYSTEM", isRead = false)
+        _notifications.value = listOf(notif) + _notifications.value
+    }
+
+    fun deductQuranSession(studentId: String, minutes: Int, recitationSpan: String, tajweedNotes: String): Boolean {
+        val student = _students.value.find { it.id == studentId } ?: return false
+        if (student.minuteBalance < minutes) return false
+
+        val before = student.minuteBalance
+        val after = before - minutes
+
+        _students.value = _students.value.map { if (it.id == studentId) it.copy(minuteBalance = after) else it }
+        if (_currentUser.value?.id == studentId) {
+            val updatedUser = _currentUser.value?.copy(minuteBalance = after)
+            _currentUser.value = updatedUser
+            if (updatedUser != null) {
+                db.collection("users").document(updatedUser.id).set(updatedUser)
+            }
+        }
+
+        val ledgerEntry = MinuteLedgerEntry(id = "led_${UUID.randomUUID().toString().take(6)}", studentId = studentId, studentName = student.name, changeAmount = -minutes, balanceBefore = before, balanceAfter = after, type = LedgerEntryType.DEDUCTION_SESSION, reason = "جلسة تسميع: $recitationSpan", timestamp = dateFormat.format(Date()), actorName = "المقرئ")
+        _creditLedger.value = listOf(ledgerEntry) + _creditLedger.value
+
+        val notif = AppNotification(id = "notif_${UUID.randomUUID().toString().take(6)}", title = "خصم جلسة تسميع", message = "تم خصم $minutes دقيقة. رصيدك: $after.", date = dateFormat.format(Date()), type = "SESSION", isRead = false)
+        _notifications.value = listOf(notif) + _notifications.value
+        return true
+    }
+
+    fun markAllNotificationsAsRead() { _notifications.value = _notifications.value.map { it.copy(isRead = true) } }
+    fun markNotificationAsRead(id: String) { _notifications.value = _notifications.value.map { if (it.id == id) it.copy(isRead = true) else it } }
+
+    fun addAnnouncement(title: String, content: String, isPinned: Boolean) {
+        val newAnc = Announcement(id = "anc_${UUID.randomUUID().toString().take(6)}", title = title, content = content, date = dateFormat.format(Date()).substringBefore(" "), isPinned = isPinned, author = "المشرف العام")
+        _announcements.value = listOf(newAnc) + _announcements.value
+    }
+
+    fun publishQuranPost(content: String, authorRole: String = "إدارة المقرأة") {
+        val newPost = QuranPost(id = "post_${UUID.randomUUID().toString().take(6)}", authorName = "مقرأة الإمام الجزري", authorRole = authorRole, content = content, date = "الآن", likesCount = 0, commentsCount = 0, isLikedByMe = false)
+        _quranPosts.value = listOf(newPost) + _quranPosts.value
+    }
+
+    fun manualAdjustMinutes(studentName: String, amount: Int, reason: String) {
+        val user = _currentUser.value ?: return
+        val before = user.minuteBalance
+        val after = (before + amount).coerceAtLeast(0)
+        val updatedUser = user.copy(minuteBalance = after)
+        _currentUser.value = updatedUser
+        db.collection("users").document(user.id).set(updatedUser)
+
+        val entry = MinuteLedgerEntry(id = "led_${UUID.randomUUID().toString().take(6)}", studentId = user.id, studentName = studentName, changeAmount = amount, balanceBefore = before, balanceAfter = after, type = LedgerEntryType.MANUAL_ADJUSTMENT_ADMIN, reason = reason, timestamp = dateFormat.format(Date()), actorName = "المشرف العام")
+        _creditLedger.value = listOf(entry) + _creditLedger.value
+    }
+
+    fun toggleLikePost(postId: String) {
+        _quranPosts.value = _quranPosts.value.map {
+            if (it.id == postId) { val newLiked = !it.isLikedByMe; val newCount = if (newLiked) it.likesCount + 1 else it.likesCount - 1; it.copy(isLikedByMe = newLiked, likesCount = newCount) } else it
+        }
+    }
+
     fun sendChatMessage(conversationId: String, text: String) {
         if (text.isBlank()) return
         val user = _currentUser.value ?: return
         val newMsg = ChatMessage(id = "msg_${UUID.randomUUID()}", conversationId = conversationId, senderId = user.id, senderName = user.name, senderRole = user.role, content = text, type = MessageType.TEXT, timestamp = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()), isMine = true)
         val currentList = _messages.value[conversationId] ?: emptyList()
         _messages.value = _messages.value + (conversationId to (currentList + newMsg))
+        _conversations.value = _conversations.value.map { if (it.id == conversationId) it.copy(lastMessage = text, lastMessageTime = "الآن") else it }
+    }
+
+    fun updateGroupTelegramLink(groupId: String, link: String) {
+        _groups.value = _groups.value.map { g -> if (g.id == groupId) g.copy(telegramLink = link.trim().ifBlank { null }) else g }
+    }
+
+    fun createGroup(nameAr: String, nameEn: String, gender: GenderCategory, timeSlot: GroupTimeSlot, teacherName: String, currentSurah: String, telegramLink: String?, description: String) {
+        val newId = "grp_custom_${System.currentTimeMillis()}"
+        val newGroup = HalqahGroup(id = newId, nameAr = nameAr, nameEn = nameEn.ifBlank { nameAr }, timeSlot = timeSlot, gender = gender, teacherName = teacherName.ifBlank { "إدارة المقرأة" }, currentSurah = currentSurah.ifBlank { "القرآن الكريم" }, membersCount = 1, isLiveNow = false, liveRoomId = "room_$newId", telegramLink = telegramLink?.trim()?.ifBlank { null }, description = description, members = listOf(GroupMember("admin", _currentUser.value?.name ?: "المشرف العام", "المشرف العام", true)))
+        _groups.value = _groups.value + newGroup
     }
 
     fun sendGroupChatMessage(groupId: String, text: String) {
@@ -266,6 +420,137 @@ class MaqraahViewModel : ViewModel() {
         _messages.value = _messages.value + (groupId to (currentList + newMsg))
     }
 
-    // لضمان عمل التطبيق دون أخطاء في الأجزاء الأخرى التي لم أذكرها، يرجى إبقاء باقي الدوال القديمة (LiveKit، الطابور، إلخ) كما هي في ملفك الأصلي.
-    // لقد قمت فقط باستبدال نظام المصادقة والرصيد.
+    private val activeSessionJobMap = mutableMapOf<String, Job>()
+
+    private fun sendSystemGroupMessage(groupId: String, text: String) {
+        val newMsg = ChatMessage(id = "sys_msg_${UUID.randomUUID()}", conversationId = groupId, senderId = "system_jazari", senderName = "إدارة المقرأة (البث المباشر)", senderRole = UserRole.ADMIN, content = text, type = MessageType.TEXT, timestamp = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()), isMine = false)
+        val currentList = _messages.value[groupId] ?: emptyList()
+        _messages.value = _messages.value + (groupId to (currentList + newMsg))
+    }
+
+    fun startGroupBroadcast(groupId: String, context: Context?) {
+        val user = _currentUser.value ?: return
+        val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
+        if (!isAdmin) return
+
+        val nowTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        var targetGroupName = "حلقة التسميع"
+        var teacherName = user.name
+
+        _groups.value = _groups.value.map { g ->
+            if (g.id == groupId) { targetGroupName = g.nameAr; teacherName = g.teacherName; g.copy(isLiveNow = true, liveStartedAt = nowTime) } else g
+        }
+
+        if (context != null) {
+            SmartNotificationManager.notifyHalaqahLive(context, targetGroupName, teacherName)
+            LiveKitManager.connectToRoom(context = context, roomId = "room_$groupId", participantId = user.id, participantName = user.name, isTeacher = true)
+        }
+        sendSystemGroupMessage(groupId, "🔴 بدأ المشرف العام البث المباشر لحلقة ($targetGroupName) الآن.")
+    }
+
+    fun endGroupBroadcast(groupId: String, context: Context?) {
+        val user = _currentUser.value ?: return
+        val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
+        if (!isAdmin) return
+
+        val currentGroup = _groups.value.find { it.id == groupId }
+        if (currentGroup?.activeSession != null) { endStudentSessionAndDeduct(groupId, "إنهاء تلقائي مع إغلاق البث", context) }
+
+        activeSessionJobMap[groupId]?.cancel()
+        activeSessionJobMap.remove(groupId)
+        _groups.value = _groups.value.map { g -> if (g.id == groupId) g.copy(isLiveNow = false, liveStartedAt = null, activeReciterName = null, activeReciterCode = null, activeSession = null) else g }
+        LiveKitManager.disconnect()
+        sendSystemGroupMessage(groupId, "⏹️ تم إنهاء جلسة البث المباشر للحلقة.")
+    }
+
+    fun joinRecitationQueue(groupId: String, targetSurah: String = "تسميع المقرر") {
+        val user = _currentUser.value ?: return
+        val grp = _groups.value.find { it.id == groupId } ?: return
+        if (grp.queue.any { it.studentId == user.id }) return
+
+        val nextNumber = (grp.queue.maxOfOrNull { it.queueNumber } ?: 0) + 1
+        val queueItem = RecitationQueueItem(id = "q_${UUID.randomUUID().toString().take(6)}", studentId = user.id, studentName = user.name, studentCode = user.studentCode, studentGender = user.gender, targetSurah = targetSurah.ifBlank { "تسميع المقرر" }, joinedAt = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()), queueNumber = nextNumber, isAdmitted = false)
+        _groups.value = _groups.value.map { g -> if (g.id == groupId) g.copy(queue = g.queue + queueItem) else g }
+        sendSystemGroupMessage(groupId, "📋 حجز الطالب (${user.name}) دوره في طابور التسميع رقم #$nextNumber.")
+    }
+
+    fun leaveRecitationQueue(groupId: String) {
+        val user = _currentUser.value ?: return
+        _groups.value = _groups.value.map { g -> if (g.id == groupId) g.copy(queue = g.queue.filterNot { it.studentId == user.id }) else g }
+    }
+
+    fun admitStudentToLiveSession(groupId: String, studentId: String, context: Context?) {
+        val user = _currentUser.value ?: return
+        val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
+        if (!isAdmin) return
+
+        val grp = _groups.value.find { it.id == groupId } ?: return
+        val studentItem = grp.queue.find { it.studentId == studentId }
+        val student = _students.value.find { it.id == studentId } ?: _currentUser.value
+        val studentName = studentItem?.studentName ?: student?.name ?: "طالب المقرأة"
+        val studentCode = studentItem?.studentCode ?: student?.studentCode ?: "JZR-1000"
+        val surah = studentItem?.targetSurah ?: "سورة البقرة"
+
+        if (grp.activeSession != null) { endStudentSessionAndDeduct(groupId, "إنهاء تلقائي لبدء طالب جديد", context) }
+
+        val session = ActiveRecitationSession(sessionId = "ses_${UUID.randomUUID().toString().take(6)}", groupId = groupId, studentId = studentId, studentName = studentName, studentCode = studentCode, teacherName = user.name, startedAtTimestamp = System.currentTimeMillis(), elapsedSeconds = 0, surahName = surah, isRunning = true, liveKitRoomName = "room_$groupId")
+        _groups.value = _groups.value.map { g ->
+            if (g.id == groupId) {
+                val updatedQueue = g.queue.map { q -> if (q.studentId == studentId) q.copy(isAdmitted = true) else q }
+                g.copy(activeSession = session, activeReciterName = studentName, activeReciterCode = studentCode, queue = updatedQueue)
+            } else g
+        }
+
+        activeSessionJobMap[groupId]?.cancel()
+        activeSessionJobMap[groupId] = viewModelScope.launch {
+            while (isActive) {
+                delay(1000)
+                val currentG = _groups.value.find { it.id == groupId }
+                val currentS = currentG?.activeSession ?: break
+                if (currentS.isRunning) {
+                    val updatedS = currentS.copy(elapsedSeconds = currentS.elapsedSeconds + 1)
+                    _groups.value = _groups.value.map { g -> if (g.id == groupId) g.copy(activeSession = updatedS) else g }
+                }
+            }
+        }
+        LiveKitManager.setStudentParticipant(studentId, studentName)
+        sendSystemGroupMessage(groupId, "🎙️ دخل الطالب ($studentName) إلى البث المباشر مع المعلم.")
+    }
+
+    fun toggleSessionTimer(groupId: String) {
+        _groups.value = _groups.value.map { g -> if (g.id == groupId && g.activeSession != null) { val updated = g.activeSession.copy(isRunning = !g.activeSession.isRunning); g.copy(activeSession = updated) } else g }
+    }
+
+    fun endStudentSessionAndDeduct(groupId: String, notes: String = "", context: Context?) {
+        val user = _currentUser.value ?: return
+        val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
+        if (!isAdmin) return
+
+        activeSessionJobMap[groupId]?.cancel()
+        activeSessionJobMap.remove(groupId)
+        val grp = _groups.value.find { it.id == groupId } ?: return
+        val session = grp.activeSession ?: return
+
+        val durationSeconds = session.elapsedSeconds
+        val exactDeductedMinutes = maxOf(1, ceil(durationSeconds / 60.0).toInt())
+        val student = _students.value.find { it.id == session.studentId }
+        val oldBalance = student?.minuteBalance ?: _currentUser.value?.minuteBalance ?: 60
+        val newBalance = maxOf(0, oldBalance - exactDeductedMinutes)
+
+        if (student != null) {
+            val updatedStudent = student.copy(minuteBalance = newBalance)
+            _students.value = _students.value.map { if (it.id == student.id) updatedStudent else it }
+        }
+        if (_currentUser.value?.id == session.studentId) {
+            val updatedUser = _currentUser.value?.copy(minuteBalance = newBalance)
+            _currentUser.value = updatedUser
+            if (updatedUser != null) { db.collection("users").document(updatedUser.id).set(updatedUser) }
+        }
+
+        val ledger = MinuteLedgerEntry(id = "led_${UUID.randomUUID().toString().take(6)}", studentId = session.studentId, studentName = session.studentName, changeAmount = -exactDeductedMinutes, balanceBefore = oldBalance, balanceAfter = newBalance, type = LedgerEntryType.DEDUCTION_SESSION, reason = "خصم تلقائي: جلسة تسميع مشافهة (${durationSeconds} ثانية)", timestamp = dateFormat.format(Date()), actorName = user.name)
+        _creditLedger.value = listOf(ledger) + _creditLedger.value
+        _groups.value = _groups.value.map { g -> if (g.id == groupId) g.copy(activeSession = null, activeReciterName = null, activeReciterCode = null, queue = grp.queue.filterNot { it.studentId == session.studentId }) else g }
+        LiveKitManager.clearStudentParticipant()
+        sendSystemGroupMessage(groupId, "✅ تم إنهاء جلسة التسميع للطالب (${session.studentName}).")
+    }
 }

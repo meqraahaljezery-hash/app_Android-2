@@ -1,12 +1,21 @@
 package com.example.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.data.model.*
+import com.example.util.LiveKitManager
+import com.example.util.SmartNotificationManager
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.ceil
 
 class MaqraahViewModel : ViewModel() {
 
@@ -917,5 +926,300 @@ class MaqraahViewModel : ViewModel() {
         )
         val currentList = _messages.value[groupId] ?: emptyList()
         _messages.value = _messages.value + (groupId to (currentList + newMsg))
+    }
+
+    // =========================================================================
+    // نظام البث المباشر والصوت التفاعلي LiveKit والطابور الذكي (1-on-1 Recitation)
+    // =========================================================================
+
+    private val activeSessionJobMap = mutableMapOf<String, Job>()
+
+    private fun sendSystemGroupMessage(groupId: String, text: String) {
+        val newMsg = ChatMessage(
+            id = "sys_msg_${UUID.randomUUID().toString().take(6)}",
+            conversationId = groupId,
+            senderId = "system_jazari",
+            senderName = "إدارة المقرأة (البث المباشر)",
+            senderRole = UserRole.ADMIN,
+            content = text,
+            type = MessageType.TEXT,
+            timestamp = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()),
+            isMine = false
+        )
+        val currentList = _messages.value[groupId] ?: emptyList()
+        _messages.value = _messages.value + (groupId to (currentList + newMsg))
+    }
+
+    // 1. بدء البث المباشر للحلقة (صلاحية المشرف / المعلم)
+    fun startGroupBroadcast(groupId: String, context: Context?) {
+        val user = _currentUser.value ?: return
+        val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
+        if (!isAdmin) return
+
+        val nowTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        var targetGroupName = "حلقة التسميع"
+        var teacherName = user.name
+
+        _groups.value = _groups.value.map { g ->
+            if (g.id == groupId) {
+                targetGroupName = g.nameAr
+                teacherName = g.teacherName
+                g.copy(isLiveNow = true, liveStartedAt = nowTime)
+            } else g
+        }
+
+        if (context != null) {
+            SmartNotificationManager.notifyHalaqahLive(context, targetGroupName, teacherName)
+            LiveKitManager.connectToRoom(
+                context = context,
+                roomId = "room_$groupId",
+                participantId = user.id,
+                participantName = user.name,
+                isTeacher = true
+            )
+        }
+
+        sendSystemGroupMessage(
+            groupId,
+            "🔴 بدأ المشرف العام / المعلم البث المباشر لحلقة ($targetGroupName) الآن. يمكن للطلاب أخذ دورهم في طابور القراءة المشافهة 🎙️."
+        )
+    }
+
+    // 2. إنهاء البث المباشر العام للحلقة
+    fun endGroupBroadcast(groupId: String, context: Context?) {
+        val user = _currentUser.value ?: return
+        val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
+        if (!isAdmin) return
+
+        val currentGroup = _groups.value.find { it.id == groupId }
+        if (currentGroup?.activeSession != null) {
+            endStudentSessionAndDeduct(groupId, "إنهاء تلقائي مع إغلاق البث", context)
+        }
+
+        activeSessionJobMap[groupId]?.cancel()
+        activeSessionJobMap.remove(groupId)
+
+        _groups.value = _groups.value.map { g ->
+            if (g.id == groupId) {
+                g.copy(
+                    isLiveNow = false,
+                    liveStartedAt = null,
+                    activeReciterName = null,
+                    activeReciterCode = null,
+                    activeSession = null
+                )
+            } else g
+        }
+
+        LiveKitManager.disconnect()
+        sendSystemGroupMessage(groupId, "⏹️ تم إنهاء جلسة البث المباشر للحلقة. بارك الله في جميع الطلاب والمعلمين.")
+    }
+
+    // 3. أخذ دور في طابور القراءة (للطلاب)
+    fun joinRecitationQueue(groupId: String, targetSurah: String = "تسميع المقرر") {
+        val user = _currentUser.value ?: return
+        val grp = _groups.value.find { it.id == groupId } ?: return
+
+        // منع التكرار إذا كان الطالب في الطابور بالفعل
+        if (grp.queue.any { it.studentId == user.id }) return
+
+        val nextNumber = (grp.queue.maxOfOrNull { it.queueNumber } ?: 0) + 1
+        val queueItem = RecitationQueueItem(
+            id = "q_${UUID.randomUUID().toString().take(6)}",
+            studentId = user.id,
+            studentName = user.name,
+            studentCode = user.studentCode,
+            studentGender = user.gender,
+            targetSurah = targetSurah.ifBlank { "تسميع المقرر" },
+            joinedAt = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()),
+            queueNumber = nextNumber,
+            isAdmitted = false
+        )
+
+        _groups.value = _groups.value.map { g ->
+            if (g.id == groupId) {
+                g.copy(queue = g.queue + queueItem)
+            } else g
+        }
+
+        sendSystemGroupMessage(
+            groupId,
+            "📋 حجز الطالب (${user.name} - ${user.studentCode}) دوره في طابور التسميع رقم #$nextNumber للمقرر: $targetSurah."
+        )
+    }
+
+    // 4. مغادرة طابور القراءة
+    fun leaveRecitationQueue(groupId: String) {
+        val user = _currentUser.value ?: return
+        _groups.value = _groups.value.map { g ->
+            if (g.id == groupId) {
+                g.copy(queue = g.queue.filterNot { it.studentId == user.id })
+            } else g
+        }
+    }
+
+    // 5. قبول وإدخال الطالب إلى البث المباشر (صلاحية المعلم / المشرف)
+    fun admitStudentToLiveSession(groupId: String, studentId: String, context: Context?) {
+        val user = _currentUser.value ?: return
+        val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
+        if (!isAdmin) return
+
+        val grp = _groups.value.find { it.id == groupId } ?: return
+        val studentItem = grp.queue.find { it.studentId == studentId }
+        val student = _students.value.find { it.id == studentId } ?: _currentUser.value
+
+        val studentName = studentItem?.studentName ?: student?.name ?: "طالب المقرأة"
+        val studentCode = studentItem?.studentCode ?: student?.studentCode ?: "JZR-1000"
+        val surah = studentItem?.targetSurah ?: "سورة البقرة"
+
+        if (grp.activeSession != null) {
+            endStudentSessionAndDeduct(groupId, "إنهاء تلقائي لبدء طالب جديد", context)
+        }
+
+        val session = ActiveRecitationSession(
+            sessionId = "ses_${UUID.randomUUID().toString().take(6)}",
+            groupId = groupId,
+            studentId = studentId,
+            studentName = studentName,
+            studentCode = studentCode,
+            teacherName = user.name,
+            startedAtTimestamp = System.currentTimeMillis(),
+            elapsedSeconds = 0,
+            surahName = surah,
+            isRunning = true,
+            liveKitRoomName = "room_$groupId"
+        )
+
+        _groups.value = _groups.value.map { g ->
+            if (g.id == groupId) {
+                val updatedQueue = g.queue.map { q ->
+                    if (q.studentId == studentId) q.copy(isAdmitted = true) else q
+                }
+                g.copy(
+                    activeSession = session,
+                    activeReciterName = studentName,
+                    activeReciterCode = studentCode,
+                    queue = updatedQueue
+                )
+            } else g
+        }
+
+        // تشغيل مؤقت العد التصاعدي الدقيق للجلسة بالثواني
+        activeSessionJobMap[groupId]?.cancel()
+        activeSessionJobMap[groupId] = viewModelScope.launch {
+            while (isActive) {
+                delay(1000)
+                val currentG = _groups.value.find { it.id == groupId }
+                val currentS = currentG?.activeSession ?: break
+                if (currentS.isRunning) {
+                    val updatedS = currentS.copy(elapsedSeconds = currentS.elapsedSeconds + 1)
+                    _groups.value = _groups.value.map { g ->
+                        if (g.id == groupId) g.copy(activeSession = updatedS) else g
+                    }
+                }
+            }
+        }
+
+        LiveKitManager.setStudentParticipant(studentId, studentName)
+
+        if (context != null) {
+            SmartNotificationManager.sendNotification(
+                context = context,
+                notificationId = 777,
+                channelId = SmartNotificationManager.CHANNEL_ID_HALAQAT,
+                title = "حان دورك في التسميع المباشر! 🎙️",
+                message = "أهلاً يا $studentName، أدخلك الشيخ إلى البث الصوتي المباشر الآن لتسميع $surah."
+            )
+        }
+
+        sendSystemGroupMessage(
+            groupId,
+            "🎙️ دخل الطالب ($studentName - $studentCode) إلى البث المباشر المشافهة مع المعلم (${user.name}) لتسميع $surah."
+        )
+    }
+
+    // 6. إيقاف مؤقت أو استئناف عداد جلسة التسميع
+    fun toggleSessionTimer(groupId: String) {
+        _groups.value = _groups.value.map { g ->
+            if (g.id == groupId && g.activeSession != null) {
+                val updated = g.activeSession.copy(isRunning = !g.activeSession.isRunning)
+                g.copy(activeSession = updated)
+            } else g
+        }
+    }
+
+    // 7. إنهاء جلسة الطالب والخصم التلقائي الدقيق من الرصيد بدون كتابة يدوية
+    fun endStudentSessionAndDeduct(groupId: String, notes: String = "", context: Context?) {
+        val user = _currentUser.value ?: return
+        val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
+        if (!isAdmin) return
+
+        activeSessionJobMap[groupId]?.cancel()
+        activeSessionJobMap.remove(groupId)
+
+        val grp = _groups.value.find { it.id == groupId } ?: return
+        val session = grp.activeSession ?: return
+
+        val durationSeconds = session.elapsedSeconds
+        val exactDeductedMinutes = maxOf(1, ceil(durationSeconds / 60.0).toInt())
+
+        // تحديث رصيد الطالب تلقائياً في قاعدة البيانات
+        val student = _students.value.find { it.id == session.studentId }
+        val oldBalance = student?.minuteBalance ?: _currentUser.value?.minuteBalance ?: 60
+        val newBalance = maxOf(0, oldBalance - exactDeductedMinutes)
+
+        if (student != null) {
+            val updatedStudent = student.copy(minuteBalance = newBalance)
+            _students.value = _students.value.map { if (it.id == student.id) updatedStudent else it }
+        }
+
+        if (_currentUser.value?.id == session.studentId) {
+            _currentUser.value = _currentUser.value?.copy(minuteBalance = newBalance)
+        }
+
+        // توثيق العملية في دفتر السجلات والحسابات (Credit Ledger)
+        val ledger = MinuteLedgerEntry(
+            id = "led_${UUID.randomUUID().toString().take(6)}",
+            studentId = session.studentId,
+            studentName = session.studentName,
+            changeAmount = -exactDeductedMinutes,
+            balanceBefore = oldBalance,
+            balanceAfter = newBalance,
+            type = LedgerEntryType.DEDUCTION_SESSION,
+            reason = "خصم تلقائي دقيق: جلسة تسميع مشافهة مباشرة (${durationSeconds} ثانية) لـ ${session.surahName}. ${notes.ifBlank { "تقبل الله" }}",
+            timestamp = dateFormat.format(Date()),
+            actorName = user.name
+        )
+        _creditLedger.value = listOf(ledger) + _creditLedger.value
+
+        val updatedQueue = grp.queue.filterNot { it.studentId == session.studentId }
+
+        _groups.value = _groups.value.map { g ->
+            if (g.id == groupId) {
+                g.copy(
+                    activeSession = null,
+                    activeReciterName = null,
+                    activeReciterCode = null,
+                    queue = updatedQueue
+                )
+            } else g
+        }
+
+        LiveKitManager.clearStudentParticipant()
+
+        if (context != null) {
+            SmartNotificationManager.sendNotification(
+                context = context,
+                notificationId = 778,
+                channelId = SmartNotificationManager.CHANNEL_ID_ALERTS,
+                title = "تم إنهاء جلسة التسميع وخصم الرصيد ⏱️",
+                message = "بارك الله فيك يا ${session.studentName}. استغرقت الجلسة ${durationSeconds} ثانية ($exactDeductedMinutes دقيقة). تم الخصم تلقائياً ورصيدك المتبقي: $newBalance دقيقة."
+            )
+        }
+
+        sendSystemGroupMessage(
+            groupId,
+            "✅ تم إنهاء جلسة التسميع للطالب (${session.studentName}). مدة القراءة: ${durationSeconds} ثانية ($exactDeductedMinutes دقيقة). تم خصمها بدقة وتوثيقها في السجل."
+        )
     }
 }

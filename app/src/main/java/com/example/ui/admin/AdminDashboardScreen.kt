@@ -153,6 +153,14 @@ fun AdminDashboardScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "رجوع")
                     }
                 },
+                actions = {
+                    IconButton(onClick = {
+                        com.example.util.SmartNotificationManager.sendTestNotification(context, "تنبيه إداري من المشرف العام")
+                        Toast.makeText(context, "تم إرسال إشعار فوري لشريط إشعارات الجوال 🔔", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = "إشعار تجريبي للجوال", tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
@@ -1172,10 +1180,11 @@ fun AdminDashboardScreen(
                     onClick = {
                         if (newAncTitle.isNotBlank()) {
                             maqraahViewModel.addAnnouncement(newAncTitle, newAncContent, newAncPinned)
+                            com.example.util.SmartNotificationManager.notifyAnnouncement(context, newAncTitle, newAncContent)
                             showNewAnnouncementDialog = false
                             newAncTitle = ""
                             newAncContent = ""
-                            Toast.makeText(context, "تم نشر الإعلان بنجاح", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "تم نشر الإعلان وبث الإشعار لشريط التنبيهات بنجاح", Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF18794E))

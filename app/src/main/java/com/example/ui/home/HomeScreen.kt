@@ -2,6 +2,7 @@ package com.example.ui.home
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,6 +30,12 @@ import com.example.data.model.QuranPost
 import com.example.data.model.User
 import com.example.i18n.AppLanguage
 import com.example.i18n.Strings
+import com.example.ui.theme.IslamicGold
+import com.example.ui.theme.IslamicGoldBorder
+import com.example.ui.theme.IslamicEmerald
+import com.example.ui.theme.CairoFontFamily
+import com.example.ui.theme.NotoSansEthiopicFontFamily
+import com.example.util.SmartNotificationManager
 import com.example.viewmodel.MaqraahViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,28 +76,32 @@ fun HomeScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                .background(IslamicEmerald)
+                                .border(1.5.dp, IslamicGold, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.MenuBook,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
+                            Image(
+                                painter = painterResource(id = R.drawable.app_logo_al_jezery),
+                                contentDescription = "شعار مقرأة الإمام الجزري",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "مقرأة الإمام الجزري",
+                                text = if (currentLanguage == AppLanguage.AMHARIC) "የኢማም አል-ጀዘሪ ማዕከል" else "مقرأة الإمام الجزري",
+                                fontFamily = if (currentLanguage == AppLanguage.AMHARIC) NotoSansEthiopicFontFamily else CairoFontFamily,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "للإقراء والإجازة بالسند",
+                                text = if (currentLanguage == AppLanguage.AMHARIC) "የቁርኣን ንባብ እና የቀጥታ ሰነድ ማዕከል" else "للإقراء والإجازة بالسند المتصل",
+                                fontFamily = if (currentLanguage == AppLanguage.AMHARIC) NotoSansEthiopicFontFamily else CairoFontFamily,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -838,22 +849,62 @@ fun HomeScreen(
                 }
             },
             text = {
-                if (notifications.isEmpty()) {
-                    Box(
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // شريط التنبيه بالإشعارات الذكية على شريط الجوال
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(bottom = 12.dp)
                     ) {
-                        Text(text = "لا توجد إشعارات حالياً", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "إشعارات شريط الجوال (Notification Panel)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "تصلك التنبيهات علوياً عند الحلقات والتسجيل",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            FilledTonalButton(
+                                onClick = {
+                                    SmartNotificationManager.sendTestNotification(context)
+                                    Toast.makeText(context, "تم إرسال إشعار فوري لشريط التنبيهات 🔔", Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text("تجربة 🔔", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 400.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
+
+                    if (notifications.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "لا توجد إشعارات مسجلة حالياً", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 380.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
                         items(notifications) { notif ->
                             Card(
                                 modifier = Modifier
@@ -903,7 +954,8 @@ fun HomeScreen(
                         }
                     }
                 }
-            },
+            }
+        },
             confirmButton = {
                 Button(
                     onClick = { showNotificationsDialog = false },

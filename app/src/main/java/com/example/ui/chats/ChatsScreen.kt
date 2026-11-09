@@ -24,6 +24,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import android.content.Context
+import androidx.compose.animation.*
+import androidx.compose.foundation.border
+import kotlin.math.ceil
+import com.example.util.LiveKitManager
+import com.example.util.SmartNotificationManager
 import com.example.R
 import com.example.data.model.*
 import com.example.i18n.AppLanguage
@@ -122,6 +128,66 @@ fun ChatsScreen(
                         }
                     },
                     actions = {
+                        // علامة البث المباشر في Header اليسار في الأعلى
+                        if (isAdmin) {
+                            if (!grp.isLiveNow) {
+                                FilledTonalButton(
+                                    onClick = {
+                                        maqraahViewModel.startGroupBroadcast(grp.id, context)
+                                    },
+                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = Color(0xFFDC2626),
+                                        contentColor = Color.White
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier.padding(end = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.Sensors, contentDescription = "بدء البث", modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("بدء البث 🔴", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        maqraahViewModel.endGroupBroadcast(grp.id, context)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4B5563)),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier.padding(end = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.Stop, contentDescription = "إنهاء البث", modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("إنهاء البث 🛑", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        } else {
+                            Surface(
+                                color = if (grp.isLiveNow) Color(0xFFDC2626) else MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.padding(end = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(if (grp.isLiveNow) Color.White else Color.Gray, CircleShape)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (grp.isLiveNow) "مباشر 🔴" else "متوقف ⚪",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (grp.isLiveNow) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
                         IconButton(onClick = { showGroupMembersDialog = true }) {
                             Icon(Icons.Default.Group, contentDescription = "أعضاء المجموعة", tint = MaterialTheme.colorScheme.primary)
                         }
@@ -187,6 +253,15 @@ fun ChatsScreen(
                     .padding(innerPadding)
                     .background(MaterialTheme.colorScheme.background)
             ) {
+                // --- 1-ON-1 LIVEKIT VOICE ROOM & RECITATION QUEUE PANEL ---
+                LiveVoiceRoomAndQueuePanel(
+                    grp = grp,
+                    isAdmin = isAdmin,
+                    currentUser = currentUser,
+                    maqraahViewModel = maqraahViewModel,
+                    context = context
+                )
+
                 // --- TOP PROMINENT TELEGRAM LINK BOX ---
                 Card(
                     modifier = Modifier
@@ -888,25 +963,41 @@ fun ChatsScreen(
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Surface(
-                                        color = when (group.gender) {
-                                            GenderCategory.BROTHERS -> MaterialTheme.colorScheme.primaryContainer
-                                            GenderCategory.SISTERS -> MaterialTheme.colorScheme.secondaryContainer
-                                            GenderCategory.GENERAL -> TelegramBlue.copy(alpha = 0.15f)
-                                        },
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Text(
-                                            text = group.gender.labelAr,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        if (group.isLiveNow) {
+                                            Surface(
+                                                color = Color(0xFFDC2626),
+                                                shape = RoundedCornerShape(6.dp)
+                                            ) {
+                                                Text(
+                                                    text = "بث مباشر 🔴",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                        }
+                                        Surface(
                                             color = when (group.gender) {
-                                                GenderCategory.BROTHERS -> MaterialTheme.colorScheme.primary
-                                                GenderCategory.SISTERS -> Color(0xFF92400E)
-                                                GenderCategory.GENERAL -> TelegramBlue
+                                                GenderCategory.BROTHERS -> MaterialTheme.colorScheme.primaryContainer
+                                                GenderCategory.SISTERS -> MaterialTheme.colorScheme.secondaryContainer
+                                                GenderCategory.GENERAL -> TelegramBlue.copy(alpha = 0.15f)
                                             },
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                        )
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = group.gender.labelAr,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = when (group.gender) {
+                                                    GenderCategory.BROTHERS -> MaterialTheme.colorScheme.primary
+                                                    GenderCategory.SISTERS -> Color(0xFF92400E)
+                                                    GenderCategory.GENERAL -> TelegramBlue
+                                                },
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
                                     }
                                 }
 
@@ -921,6 +1012,24 @@ fun ChatsScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+
+                                if (group.isLiveNow) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    if (group.activeSession != null) {
+                                        Text(
+                                            text = "🎙️ في البث الآن: ${group.activeSession.studentName} (${group.activeSession.studentCode})",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF16A34A)
+                                        )
+                                    }
+                                    Text(
+                                        text = "⏳ طابور الانتظار: ${group.queue.size} طلاب ينتظرون دورهم",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -1130,6 +1239,674 @@ fun ChatsScreen(
             dismissButton = {
                 Button(
                     onClick = { showCreateGroupDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+                ) {
+                    Text("إلغاء")
+                }
+            }
+        )
+    }
+}
+
+/**
+ * مؤشر نبضات ومستويات الصوت المباشر المشافهة
+ */
+@Composable
+fun AudioWaveVisualizer(
+    isSpeaking: Boolean,
+    audioLevel: Float,
+    isMuted: Boolean,
+    color: Color = Color(0xFF16A34A)
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.height(18.dp)
+    ) {
+        val bar1Height = if (isMuted) 3.dp else if (isSpeaking) (6 + (audioLevel * 8)).dp else 4.dp
+        val bar2Height = if (isMuted) 3.dp else if (isSpeaking) (8 + (audioLevel * 12)).dp else 6.dp
+        val bar3Height = if (isMuted) 3.dp else if (isSpeaking) (11 + (audioLevel * 14)).dp else 7.dp
+        val bar4Height = if (isMuted) 3.dp else if (isSpeaking) (7 + (audioLevel * 10)).dp else 5.dp
+
+        Box(modifier = Modifier.width(3.dp).height(bar1Height).background(if (isMuted) Color.Gray else color, RoundedCornerShape(2.dp)))
+        Box(modifier = Modifier.width(3.dp).height(bar2Height).background(if (isMuted) Color.Gray else color, RoundedCornerShape(2.dp)))
+        Box(modifier = Modifier.width(3.dp).height(bar3Height).background(if (isMuted) Color.Gray else color, RoundedCornerShape(2.dp)))
+        Box(modifier = Modifier.width(3.dp).height(bar4Height).background(if (isMuted) Color.Gray else color, RoundedCornerShape(2.dp)))
+    }
+}
+
+/**
+ * لوحة البث الصوتي المباشر وطابور التسميع الحقيقي (LiveKit WebRTC 1-on-1):
+ * - حصر المشاركين الصوتين باثنين فقط (الشيخ المقرئ + الطالب الحالي) توفيراً للموارد وحسب سياسة البث.
+ * - طابور قراءة تسلسلي بالاسم والكود (#1, #2, #3, ...) يظهر لجميع أعضاء المجموعة.
+ * - أزرار تحكم المعلم الأربعة: بدء البث، بدء الجلسة والعداد، إنهاء الجلسة والخصم التلقائي، إنهاء البث.
+ * - زر "أضف للبث 🎙️" بجانب كل طالب في الطابور للمعلم.
+ */
+@Composable
+fun LiveVoiceRoomAndQueuePanel(
+    grp: HalqahGroup,
+    isAdmin: Boolean,
+    currentUser: User?,
+    maqraahViewModel: MaqraahViewModel,
+    context: Context
+) {
+    val isLocalMicMuted by LiveKitManager.isLocalMicMuted.collectAsState()
+    val teacherParticipant by LiveKitManager.teacherParticipant.collectAsState()
+    val studentParticipant by LiveKitManager.studentParticipant.collectAsState()
+
+    var isQueueExpanded by remember { mutableStateOf(true) }
+    var showJoinDialog by remember { mutableStateOf(false) }
+    var targetSurahText by remember { mutableStateOf("سورة البقرة") }
+
+    val myQueueItem = grp.queue.find { it.studentId == currentUser?.id }
+    val isMyTurnInSession = grp.activeSession?.studentId == currentUser?.id
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (grp.isLiveNow) Color(0xFF022B21) else MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Header Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(
+                                if (grp.isLiveNow) Color(0xFFEF4444) else Color.Gray,
+                                CircleShape
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = if (grp.isLiveNow) "البث الصوتي المباشر مشافهة (LiveKit)" else "غرفة البث الصوتي المباشر",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (grp.isLiveNow) Color.White else MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (grp.isLiveNow)
+                                "جلسة مشافهة ثنائية (1-on-1): الشيخ المقرئ + طالب واحد فقط"
+                            else
+                                "البث مغلق حالياً • يبدأه المعلم أو المشرف",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (grp.isLiveNow) Color(0xFF99F6E4) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (grp.isLiveNow) {
+                    Surface(
+                        color = Color(0xFFDC2626),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "LIVE 🔴",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+
+            if (!grp.isLiveNow) {
+                // When broadcast is not live yet
+                if (isAdmin) {
+                    Button(
+                        onClick = {
+                            maqraahViewModel.startGroupBroadcast(grp.id, context)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Sensors, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("بدء البث الصوتي المباشر للحلقة 🔴", fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "سيبدأ البث الصوتي فور دخول المعلم المشرف. ستصلك إشعارات فورية على شريط إشعارات الجوال فور الانطلاق.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            } else {
+                // When broadcast is LIVE NOW
+                // --- 1. Two Participants Pods (1-on-1: Teacher & Active Student Only) ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Teacher Pod
+                    Surface(
+                        color = Color(0xFF044737),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color(0xFF0F766E), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.RecordVoiceOver,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = grp.teacherName,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "الشيخ المقرئ 🎓",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF5EEAD4)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            AudioWaveVisualizer(
+                                isSpeaking = teacherParticipant?.isSpeaking ?: true,
+                                audioLevel = teacherParticipant?.audioLevel ?: 0.6f,
+                                isMuted = false,
+                                color = Color(0xFF34D399)
+                            )
+                        }
+                    }
+
+                    // Student Pod (1-on-1)
+                    val activeSession = grp.activeSession
+                    Surface(
+                        color = if (activeSession != null) Color(0xFF044737) else Color(0xFF1E293B),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(
+                                        if (activeSession != null) Color(0xFF16A34A) else Color(0xFF334155),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    if (activeSession != null) Icons.Default.Mic else Icons.Default.HourglassEmpty,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = activeSession?.studentName ?: "بانتظار طالب",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = activeSession?.studentCode ?: "من طابور الانتظار",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (activeSession != null) Color(0xFF86EFAC) else Color(0xFF94A3B8)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            if (activeSession != null) {
+                                AudioWaveVisualizer(
+                                    isSpeaking = studentParticipant?.isSpeaking ?: true,
+                                    audioLevel = studentParticipant?.audioLevel ?: 0.7f,
+                                    isMuted = false,
+                                    color = Color(0xFF4ADE80)
+                                )
+                            } else {
+                                Text(
+                                    text = "بانتظار الإذن",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF94A3B8)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // --- 2. Live Session Stopwatch & Automated Deduction Preview ---
+                if (grp.activeSession != null) {
+                    val s = grp.activeSession
+                    val elapsedSec = s.elapsedSeconds
+                    val mins = elapsedSec / 60
+                    val secs = elapsedSec % 60
+                    val timeFormatted = String.format("%02d:%02d", mins, secs)
+                    val exactDeducted = maxOf(1, ceil(elapsedSec / 60.0).toInt())
+
+                    Surface(
+                        color = Color(0xFF0F172A),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Timer,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFBBF24),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = timeFormatted,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF34D399)
+                                )
+                                Text(
+                                    text = if (s.isRunning) "(يعد بالثواني ⏱️)" else "(مؤقت متوقف ⏸️)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF94A3B8)
+                                )
+                            }
+                            Text(
+                                text = "المقرر: ${s.surahName} • المحتسب تلقائياً: $exactDeducted دقيقة تخصم مباشرة من رصيد ${s.studentName} عند الإنهاء بدون كتابة يدوية",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFE2E8F0),
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                // --- 3. The 4 Teacher Controls Bar (المشرف / المعلم) ---
+                if (isAdmin) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "لوحة تحكم المعلم المشرف (النقرات الأساسية الأربع):",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF5EEAD4)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Button 1: Start/Pause Session Timer
+                            Button(
+                                onClick = { maqraahViewModel.toggleSessionTimer(grp.id) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D9488)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    if (grp.activeSession?.isRunning == true) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (grp.activeSession?.isRunning == true) "إيقاف ⏸️" else "تشغيل العداد ▶️",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // Button 2: End Student Session & Automated Deduction
+                            Button(
+                                onClick = {
+                                    maqraahViewModel.endStudentSessionAndDeduct(
+                                        grp.id,
+                                        "إنهاء التسميع والخصم الآلي",
+                                        context
+                                    )
+                                },
+                                enabled = grp.activeSession != null,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFEA580C),
+                                    disabledContainerColor = Color(0xFF475569)
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1.3f),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                            ) {
+                                Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "إنهاء وخصم آلي ⏹️",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Button 3: Mic Mute Toggle
+                            OutlinedButton(
+                                onClick = { LiveKitManager.toggleMicrophone() },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    if (isLocalMicMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                                    contentDescription = null,
+                                    tint = if (isLocalMicMuted) Color(0xFFEF4444) else Color(0xFF22C55E),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isLocalMicMuted) "المايك مكتوم" else "المايك يعمل",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+
+                            // Button 4: End General Broadcast
+                            Button(
+                                onClick = { maqraahViewModel.endGroupBroadcast(grp.id, context) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                            ) {
+                                Icon(Icons.Default.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "إنهاء البث 🛑",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // --- 4. Recitation Queue Section («طابور التسميع») ---
+                Surface(
+                    color = Color(0xFF063B2F),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isQueueExpanded = !isQueueExpanded },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.FormatListNumbered,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFBBF24),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "طابور التسميع (${grp.queue.size} طلاب ينتظرون)",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                            Icon(
+                                if (isQueueExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                        }
+
+                        if (isQueueExpanded) {
+                            // Student actions: take turn or show status
+                            if (!isAdmin) {
+                                if (isMyTurnInSession) {
+                                    Surface(
+                                        color = Color(0xFF16A34A),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "🎙️ أنت الآن في البث المباشر مع المعلم! صوتك مسموع للمقرئ، تفضل بالتسميع.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(10.dp)
+                                        )
+                                    }
+                                } else if (myQueueItem != null) {
+                                    Surface(
+                                        color = if (myQueueItem.isAdmitted) Color(0xFF15803D) else Color(0xFFD97706),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = if (myQueueItem.isAdmitted)
+                                                        "تم قبولك! دورك في البث الآن 🎙️"
+                                                    else
+                                                        "أنت في الطابور برقم #${myQueueItem.queueNumber} ⏳",
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                                Text(
+                                                    text = "المقرر: ${myQueueItem.targetSurah}",
+                                                    color = Color(0xFFFEF3C7),
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
+                                            TextButton(
+                                                onClick = { maqraahViewModel.leaveRecitationQueue(grp.id) },
+                                                colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                                            ) {
+                                                Text("مغادرة ❌", style = MaterialTheme.typography.labelSmall)
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // Student is NOT in queue: Show "خذ طابور"
+                                    Button(
+                                        onClick = { showJoinDialog = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("خذ طابورك في التسميع (احجز دورك) 📝", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            // The Queue List items
+                            if (grp.queue.isEmpty()) {
+                                Text(
+                                    text = "لا يوجد طلاب في طابور التسميع حالياً.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF99F6E4),
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    grp.queue.forEach { item ->
+                                        Surface(
+                                            color = if (item.isAdmitted) Color(0xFF044E3F) else Color(0xFF0B2922),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(8.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Surface(
+                                                        color = if (item.isAdmitted) Color(0xFF22C55E) else Color(0xFFF59E0B),
+                                                        shape = CircleShape,
+                                                        modifier = Modifier.size(26.dp)
+                                                    ) {
+                                                        Box(contentAlignment = Alignment.Center) {
+                                                            Text(
+                                                                text = "#${item.queueNumber}",
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = Color.Black
+                                                            )
+                                                        }
+                                                    }
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Column {
+                                                        Text(
+                                                            text = item.studentName,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = Color.White
+                                                        )
+                                                        Text(
+                                                            text = "${item.studentCode} • ${item.targetSurah} • ${item.joinedAt}",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = Color(0xFF99F6E4)
+                                                        )
+                                                    }
+                                                }
+
+                                                // Teacher button: "أضف" / "أضف إلى البث 🎙️"
+                                                if (isAdmin) {
+                                                    Button(
+                                                        onClick = {
+                                                            maqraahViewModel.admitStudentToLiveSession(
+                                                                grp.id,
+                                                                item.studentId,
+                                                                context
+                                                            )
+                                                        },
+                                                        colors = ButtonDefaults.buttonColors(
+                                                            containerColor = if (item.isAdmitted) Color(0xFF10B981) else Color(0xFF22C55E)
+                                                        ),
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.Mic,
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(14.dp),
+                                                            tint = Color.White
+                                                        )
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(
+                                                            text = if (item.isAdmitted) "في البث 🎙️" else "أضف للبث 🎙️",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = Color.White
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal to pick surah when joining queue
+    if (showJoinDialog) {
+        AlertDialog(
+            onDismissRequest = { showJoinDialog = false },
+            title = { Text(text = "حجز دور في طابور التسميع", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "اختر أو اكتب السورة والمنهج المراد تسميعه أمام الشيخ:")
+                    OutlinedTextField(
+                        value = targetSurahText,
+                        onValueChange = { targetSurahText = it },
+                        label = { Text("السورة / المقرر") },
+                        placeholder = { Text("مثال: سورة البقرة من الآية 1 إلى 50") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        maqraahViewModel.joinRecitationQueue(grp.id, targetSurahText)
+                        showJoinDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF18794E))
+                ) {
+                    Text("تأكيد حجز الدور")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showJoinDialog = false },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
                 ) {
                     Text("إلغاء")

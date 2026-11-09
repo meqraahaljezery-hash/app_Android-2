@@ -12,39 +12,42 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val LightColorScheme = lightColorScheme(
-    primary = DeepGreen,
-    onPrimary = SurfaceWhite,
-    primaryContainer = LightGreen,
-    onPrimaryContainer = DeepGreen,
-    secondary = GoldAccent,
-    onSecondary = SurfaceWhite,
-    secondaryContainer = Color(0xFFFEF3C7),
-    onSecondaryContainer = Color(0xFF92400E),
-    tertiary = PrimaryGreen,
-    background = Color(0xFFFFFFFF), // Pure white background
-    onBackground = TextPrimary,
-    surface = Color(0xFFFFFFFF),    // Pure white surface
-    onSurface = TextPrimary,
-    surfaceVariant = Color(0xFFF8FAFC),
-    onSurfaceVariant = TextSecondary,
-    outline = Color(0xFFE2E8F0)
+    primary = IslamicEmerald,
+    onPrimary = Color.White,
+    primaryContainer = IslamicEmeraldContainer,
+    onPrimaryContainer = IslamicEmerald,
+    secondary = IslamicGold,
+    onSecondary = Color.White,
+    secondaryContainer = IslamicGoldContainer,
+    onSecondaryContainer = IslamicAmber,
+    tertiary = PersianTurquoise,
+    onTertiary = Color.White,
+    background = ParchmentBackground,
+    onBackground = TextPrimaryDark,
+    surface = ParchmentSurface,
+    onSurface = TextPrimaryDark,
+    surfaceVariant = IslamicEmeraldSubtle,
+    onSurfaceVariant = TextSecondaryMuted,
+    outline = IslamicGoldBorder,
+    error = StatusLiveCrimson
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF22C55E),
-    onPrimary = Color(0xFF0B132B),
-    primaryContainer = DeepGreen,
-    onPrimaryContainer = LightGreen,
-    secondary = GoldAccent,
-    onSecondary = Color.Black,
-    tertiary = LightGreen,
-    background = DarkNavyBackground, // Deep dark blue / navy
-    onBackground = DarkNavyTextPrimary,
-    surface = DarkNavySurface,
-    onSurface = DarkNavyTextPrimary,
-    surfaceVariant = DarkNavyCard,
-    onSurfaceVariant = DarkNavyTextSecondary,
-    outline = DarkNavyBorder
+    primary = IslamicGoldBright,
+    onPrimary = Color.Black,
+    primaryContainer = MosqueNightCard,
+    onPrimaryContainer = IslamicGoldBright,
+    secondary = PersianTurquoise,
+    onSecondary = Color.White,
+    tertiary = IslamicEmeraldLight,
+    background = MosqueNightBackground,
+    onBackground = Color(0xFFF1F5F9),
+    surface = MosqueNightSurface,
+    onSurface = Color(0xFFF1F5F9),
+    surfaceVariant = MosqueNightCard,
+    onSurfaceVariant = Color(0xFF94A3B8),
+    outline = MosqueNightBorder,
+    error = StatusLiveCrimson
 )
 
 @Composable

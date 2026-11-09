@@ -17,6 +17,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.ui.res.painterResource
+import com.example.R
+import com.example.ui.theme.CairoFontFamily
+import com.example.ui.theme.NotoSansEthiopicFontFamily
+import com.example.ui.theme.IslamicEmerald
+import com.example.ui.theme.IslamicGold
 import com.example.i18n.AppLanguage
 import com.example.i18n.Strings
 
@@ -186,31 +194,53 @@ fun OnboardingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Card(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = page.icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary
+            if (currentPageIndex == 0) {
+                Box(
+                    modifier = Modifier
+                        .size(136.dp)
+                        .clip(CircleShape)
+                        .background(IslamicEmerald)
+                        .border(3.dp, IslamicGold, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.app_logo_al_jezery),
+                        contentDescription = "شعار مقرأة الإمام الجزري",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
                     )
+                }
+            } else {
+                Card(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, IslamicGold.copy(alpha = 0.5f), CircleShape),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = page.icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(28.dp))
 
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(16.dp)
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, IslamicGold.copy(alpha = 0.4f))
             ) {
                 Text(
                     text = page.highlightAr,
+                    fontFamily = CairoFontFamily,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -226,10 +256,11 @@ fun OnboardingScreen(
                     AppLanguage.AMHARIC -> page.titleAm
                     else -> page.titleAr
                 },
+                fontFamily = if (currentLanguage == AppLanguage.AMHARIC) NotoSansEthiopicFontFamily else CairoFontFamily,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -240,6 +271,7 @@ fun OnboardingScreen(
                     AppLanguage.AMHARIC -> page.descriptionAm
                     else -> page.descriptionAr
                 },
+                fontFamily = if (currentLanguage == AppLanguage.AMHARIC) NotoSansEthiopicFontFamily else CairoFontFamily,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -1,6 +1,10 @@
 package com.example.ui.profile
 
+import android.Manifest
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +25,7 @@ import com.example.data.model.User
 import com.example.data.model.UserRole
 import com.example.i18n.AppLanguage
 import com.example.i18n.Strings
+import com.example.util.SmartNotificationManager
 import com.example.viewmodel.MaqraahViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +47,23 @@ fun ProfileScreen(
 
     var showLanguageMenu by remember { mutableStateOf(false) }
     var notificationsEnabled by remember { mutableStateOf(true) }
+    var halaqatAlertsEnabled by remember { mutableStateOf(true) }
+    var dailyWirdAlertsEnabled by remember { mutableStateOf(true) }
+    var adminAlertsEnabled by remember { mutableStateOf(true) }
+    var hasSystemPermission by remember { mutableStateOf(SmartNotificationManager.hasNotificationPermission(context)) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasSystemPermission = granted
+        if (granted) {
+            Toast.makeText(context, "تم تفعيل إشعارات شريط الجوال بنجاح!", Toast.LENGTH_SHORT).show()
+            SmartNotificationManager.sendTestNotification(context)
+        } else {
+            Toast.makeText(context, "يرجى السماح بالإشعارات من إعدادات الجوال لتلقي التنبيهات", Toast.LENGTH_LONG).show()
+        }
+    }
+
     var showHelpDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
 
@@ -272,21 +294,173 @@ fun ProfileScreen(
 
                         Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 
-                        // Notifications Toggle
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        // Smart Mobile Notifications Hub (مركز الإشعارات الذكية على الجوال)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(text = "إشعارات الجوال والتنبيهات", style = MaterialTheme.typography.bodyMedium)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.NotificationsActive,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = "إشعارات شريط الجوال (Notification Panel)",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = if (hasSystemPermission) "الإذن مفعل ويصل لشريط التنبيهات علوياً ✓" else "اضغط على الزر لتفعيل إذن النظام ⚠️",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (hasSystemPermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                                Switch(
+                                    checked = notificationsEnabled,
+                                    onCheckedChange = { isChecked ->
+                                        notificationsEnabled = isChecked
+                                        if (isChecked && !hasSystemPermission) {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                            }
+                                        }
+                                    }
+                                )
                             }
-                            Switch(
-                                checked = notificationsEnabled,
-                                onCheckedChange = { notificationsEnabled = it }
-                            )
+
+                            if (notificationsEnabled) {
+                                Column(
+                                    modifier = Modifier.padding(start = 6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    // 1. تنبيهات الحلقات المباشرة
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "• تنبيهات بدء حلقات التسميع والإقراء المباشرة",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Switch(
+                                            checked = halaqatAlertsEnabled,
+                                            onCheckedChange = { halaqatAlertsEnabled = it }
+                                        )
+                                    }
+
+                                    // 2. تذكير الورد القرآني اليومي
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "• تذكير الورد القرآني اليومي وأذكار التلاوة",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Switch(
+                                            checked = dailyWirdAlertsEnabled,
+                                            onCheckedChange = { dailyWirdAlertsEnabled = it }
+                                        )
+                                    }
+
+                                    // 3. للمدير: تنبيهات تسجيل الطلاب
+                                    if (currentUser.role == UserRole.ADMIN || maqraahViewModel.isAdminEmail(currentUser.email)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "• إشعارات الإدارة: استمارات التسجيل الجديدة",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Switch(
+                                                checked = adminAlertsEnabled,
+                                                onCheckedChange = { adminAlertsEnabled = it }
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    // أزرار فحص وتجربة الإشعار الفوري في لوحة الإشعارات
+                                    Button(
+                                        onClick = {
+                                            if (!hasSystemPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                            } else {
+                                                SmartNotificationManager.sendTestNotification(context)
+                                                Toast.makeText(context, "تم إرسال إشعار فوري لشريط التنبيهات في هاتفك 🔔", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(text = "إرسال إشعار تجريبي فوري لشريط الجوال 🔔", fontWeight = FontWeight.Bold)
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                if (!hasSystemPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                                } else {
+                                                    SmartNotificationManager.notifyDailyWirdReminder(context)
+                                                    Toast.makeText(context, "تم إرسال إشعار الورد القرآني إلى لوحة الإشعارات", Toast.LENGTH_SHORT).show()
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("ورد اليوم 📖", style = MaterialTheme.typography.labelSmall)
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                if (!hasSystemPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                                } else {
+                                                    SmartNotificationManager.notifyHalaqahLive(
+                                                        context,
+                                                        "حلقة الذكور - الفترة الصباحية",
+                                                        "الشيخ د. إبراهيم أحمد"
+                                                    )
+                                                    Toast.makeText(context, "تم إرسال إشعار بدء الحلقة المباشرة", Toast.LENGTH_SHORT).show()
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("حلقة مباشرة 🎙️", style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))

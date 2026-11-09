@@ -42,6 +42,11 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.example.R
 import com.example.i18n.AppLanguage
 import com.example.i18n.Strings
+import com.example.ui.theme.CairoFontFamily
+import com.example.ui.theme.NotoSansEthiopicFontFamily
+import com.example.ui.theme.IslamicGold
+import com.example.ui.theme.IslamicGoldBorder
+import com.example.ui.theme.IslamicEmerald
 import com.example.ui.theme.UthmanicHafsFontFamily
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -65,7 +70,7 @@ import kotlinx.coroutines.tasks.await
 @Composable
 fun AuthScreen(
     currentLanguage: AppLanguage,
-    onSignIn: (email: String, name: String) -> Unit
+    onSignIn: (email: String, name: String, phone: String, gender: String, targetProgram: String) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -103,7 +108,13 @@ fun AuthScreen(
     LaunchedEffect(showWelcomeMessage) {
         if (showWelcomeMessage) {
             delay(1200)
-            onSignIn(emailInput.trim(), signedName.trim())
+            onSignIn(
+                emailInput.trim(),
+                signedName.trim(),
+                phoneInput.trim(),
+                genderInput.trim(),
+                targetProgram.trim()
+            )
         }
     }
 
@@ -147,42 +158,53 @@ fun AuthScreen(
             ) {
                 Spacer(modifier = Modifier.height(30.dp))
 
-                // App Brand Header with Quranic Typography
+                // Official Al-Jezery Brand Header with Modern Typography
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(92.dp)
                         .clip(CircleShape)
-                        .background(Color.White)
-                        .border(2.dp, Color(0xFFD4AF37), CircleShape),
+                        .background(IslamicEmerald)
+                        .border(2.5.dp, IslamicGold, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.MenuBook,
-                        contentDescription = null,
-                        modifier = Modifier.size(42.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                    Image(
+                        painter = painterResource(id = R.drawable.app_logo_al_jezery),
+                        contentDescription = "شعار مقرأة الإمام الجزري",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "مقرأة الإمام الجزري",
-                    fontFamily = UthmanicHafsFontFamily,
-                    fontSize = 26.sp,
+                    text = "مَقْرَأَةُ الإِمَامِ الجَزَرِيِّ",
+                    fontFamily = CairoFontFamily,
+                    fontSize = 25.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center
                 )
 
                 Text(
+                    text = "የኢማም አል-ጀዘሪ ቁርኣን ንባብ እና የሰነድ ኢጃዛ ማዕከል",
+                    fontFamily = NotoSansEthiopicFontFamily,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = IslamicGold,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
                     text = "للإقراء والإجازة القرآنية بالسند المتصل",
-                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = CairoFontFamily,
+                    fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Welcome transition card
                 AnimatedVisibility(visible = showWelcomeMessage, enter = fadeIn(), exit = fadeOut()) {

@@ -19,6 +19,34 @@ data class GroupMember(
     val isOnline: Boolean = true
 )
 
+data class RecitationQueueItem(
+    val id: String,
+    val studentId: String,
+    val studentName: String,
+    val studentCode: String = "",
+    val studentGender: String = "ذكر",
+    val targetSurah: String = "تسميع المقرر",
+    val fromAyah: Int = 1,
+    val toAyah: Int = 10,
+    val joinedAt: String,
+    val queueNumber: Int = 1,
+    val isAdmitted: Boolean = false
+)
+
+data class ActiveRecitationSession(
+    val sessionId: String,
+    val groupId: String,
+    val studentId: String,
+    val studentName: String,
+    val studentCode: String,
+    val teacherName: String,
+    val startedAtTimestamp: Long = System.currentTimeMillis(),
+    val elapsedSeconds: Int = 0,
+    val surahName: String = "سورة البقرة",
+    val isRunning: Boolean = true,
+    val liveKitRoomName: String = ""
+)
+
 data class HalqahGroup(
     val id: String,
     val nameAr: String,
@@ -27,34 +55,15 @@ data class HalqahGroup(
     val gender: GenderCategory,
     val teacherName: String,
     val activeReciterName: String? = null,
-    val isLiveNow: Boolean = true,
-    val membersCount: Int = 18,
-    val currentSurah: String = "سورة البقرة (الربع الثالث)",
+    val activeReciterCode: String? = null,
+    val isLiveNow: Boolean = false,
+    val liveStartedAt: String? = null,
+    val membersCount: Int = 0,
+    val currentSurah: String = "حلقات التسميع وتصحيح الأداء",
     val liveRoomId: String = "room-jazari",
-    val telegramLink: String? = null, // Manual telegram link set by admin
+    val telegramLink: String? = null,
     val description: String = "",
-    val members: List<GroupMember> = emptyList()
-)
-
-data class RecitationQueueItem(
-    val id: String,
-    val studentId: String,
-    val studentName: String,
-    val targetSurah: String,
-    val fromAyah: Int,
-    val toAyah: Int,
-    val joinedAt: String,
-    val estimatedMinutes: Int = 15
-)
-
-data class ActiveRecitationSession(
-    val sessionId: String,
-    val groupId: String,
-    val studentId: String,
-    val studentName: String,
-    val teacherName: String,
-    val startedAtTimestamp: Long,
-    val currentDurationSeconds: Int = 0,
-    val surahName: String = "سورة الكهف",
-    val isRunning: Boolean = true
+    val members: List<GroupMember> = emptyList(),
+    val queue: List<RecitationQueueItem> = emptyList(),
+    val activeSession: ActiveRecitationSession? = null
 )

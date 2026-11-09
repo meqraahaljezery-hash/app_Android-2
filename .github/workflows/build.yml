@@ -36,6 +36,9 @@ jobs:
           touch .env
           echo "GEMINI_API_KEY=${RAW_GEMINI_KEY}" >> .env
           echo "FIREBASE_APPCHECK_DEBUG_TOKEN=${RAW_APPCHECK_TOKEN}" >> .env
+          echo "LIVEKIT_URL=${{ secrets.LIVEKIT_URL }}" >> .env
+          echo "LIVEKIT_API_KEY=${{ secrets.LIVEKIT_API_KEY }}" >> .env
+          echo "LIVEKIT_API_SECRET=${{ secrets.LIVEKIT_API_SECRET }}" >> .env
 
           # 2. كتابة ملف google-services.json والتحقق من صحته كـ JSON سليم
           if [ -n "$RAW_GOOGLE_SERVICES" ]; then

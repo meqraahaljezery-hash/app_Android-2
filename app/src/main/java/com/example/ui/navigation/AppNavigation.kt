@@ -23,6 +23,12 @@ import androidx.navigation.compose.rememberNavController
 import com.example.data.model.UserRole
 import com.example.i18n.AppLanguage
 import com.example.i18n.Strings
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import com.example.util.SmartNotificationManager
 import com.example.ui.admin.AdminDashboardScreen
 import com.example.ui.auth.AuthScreen
 import com.example.ui.chats.ChatsScreen
@@ -36,8 +42,26 @@ import com.example.viewmodel.MaqraahViewModel
 fun AppNavigation(
     maqraahViewModel: MaqraahViewModel = remember { MaqraahViewModel() }
 ) {
+    val context = LocalContext.current
     val navController = rememberNavController()
     var currentLanguage by remember { mutableStateOf(AppLanguage.ARABIC) }
+
+    // طلب إذن الإشعارات الذكية في أندرويد 13+ لعرض التنبيهات في شريط الإشعارات
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            SmartNotificationManager.sendTestNotification(context)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!SmartNotificationManager.hasNotificationPermission(context)) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     val isOnboardingCompleted by maqraahViewModel.isOnboardingCompleted.collectAsState()
     val currentUser by maqraahViewModel.currentUser.collectAsState()
@@ -61,8 +85,20 @@ fun AppNavigation(
         if (currentUser == null) {
             AuthScreen(
                 currentLanguage = currentLanguage,
-                onSignIn = { email, name ->
-                    maqraahViewModel.signInWithGoogle(email, name)
+                onSignIn = { email, name, phone, gender, program ->
+                    maqraahViewModel.registerOrSignInStudent(
+                        email = email,
+                        name = name,
+                        phone = phone,
+                        gender = gender,
+                        targetProgram = program
+                    )
+                    // إرسال تنبيه حقيقي ومباشر إلى لوحة إشعارات الجوال (Notification Panel)
+                    if (maqraahViewModel.isAdminEmail(email)) {
+                        SmartNotificationManager.notifyAdminNewStudent(context, name, program)
+                    } else {
+                        SmartNotificationManager.notifyStudentRegistered(context, name, program)
+                    }
                 }
             )
             return@CompositionLocalProvider

@@ -26,22 +26,106 @@ import com.example.i18n.AppLanguage
 import com.example.i18n.Strings
 import com.example.ui.theme.TelegramBlue
 
+import com.example.viewmodel.MaqraahViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupsScreen(
-    currentLanguage: AppLanguage
+    currentLanguage: AppLanguage,
+    maqraahViewModel: MaqraahViewModel? = null,
+    onOpenGroupChat: ((HalqahGroup) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val vmGroups = maqraahViewModel?.groups?.collectAsState()?.value
 
-    val groupsList = listOf(
-        HalqahGroup("grp_m_morning", "حلقات الذكور - الفترة الصباحية (الفجر والضحى)", "Brothers Halaqat - Morning Session", GroupTimeSlot.MORNING, GenderCategory.BROTHERS, "المشرف العام وهيئة الإقراء", null, true, 18, "سورة البقرة وتصحيح التلاوة", "room-m-morning"),
-        HalqahGroup("grp_m_evening", "حلقات الذكور - الفترة المسائية (العصر والمغرب)", "Brothers Halaqat - Evening Session", GroupTimeSlot.EVENING, GenderCategory.BROTHERS, "مشايخ الإقراء المعتمدون", null, false, 15, "سورة آل عمران والنساء", "room-m-evening"),
-        HalqahGroup("grp_m_night", "حلقات الذكور - الفترة الليلية (العشاء والسحر)", "Brothers Halaqat - Night Session", GroupTimeSlot.NIGHT, GenderCategory.BROTHERS, "مشايخ الحفظ والإجازة بالسند", null, true, 22, "عرض الختمات والمراجعة المكثفة", "room-m-night"),
-        HalqahGroup("grp_f_morning", "حلقات الإناث - الفترة الصباحية (الفجر والضحى)", "Sisters Halaqat - Morning Session", GroupTimeSlot.MORNING, GenderCategory.SISTERS, "المعلمات المسندات الفضليات", null, true, 16, "سورة البقرة والتلقين", "room-f-morning"),
-        HalqahGroup("grp_f_evening", "حلقات الإناث - الفترة المسائية (العصر والمغرب)", "Sisters Halaqat - Evening Session", GroupTimeSlot.EVENING, GenderCategory.SISTERS, "المعلمات المقرئات", null, false, 14, "الحفظ والمراجعة", "room-f-evening"),
-        HalqahGroup("grp_f_night", "حلقات الإناث - الفترة الليلية (العشاء والسحر)", "Sisters Halaqat - Night Session", GroupTimeSlot.NIGHT, GenderCategory.SISTERS, "نخبة المعلمات المسندات", null, true, 19, "عرض الختمات والإتقان", "room-f-night"),
-        HalqahGroup("grp_general", "الملتقى القرآني العام (كافة الطلاب والمعلمين)", "General Quranic Forum", GroupTimeSlot.MORNING, GenderCategory.GENERAL, "إدارة المقرأة وهيئة الإقراء", null, true, 45, "مذاكرة أحكام التجويد والمتون والفوائد", "room-general")
+    val defaultList = listOf(
+        HalqahGroup(
+            id = "grp_m_morning",
+            nameAr = "حلقات الذكور - الفترة الصباحية (الفجر والضحى)",
+            nameEn = "Brothers Halaqat - Morning Session",
+            timeSlot = GroupTimeSlot.MORNING,
+            gender = GenderCategory.BROTHERS,
+            teacherName = "المشرف العام وهيئة الإقراء",
+            isLiveNow = true,
+            membersCount = 18,
+            currentSurah = "سورة البقرة وتصحيح التلاوة",
+            liveRoomId = "room-m-morning"
+        ),
+        HalqahGroup(
+            id = "grp_m_evening",
+            nameAr = "حلقات الذكور - الفترة المسائية (العصر والمغرب)",
+            nameEn = "Brothers Halaqat - Evening Session",
+            timeSlot = GroupTimeSlot.EVENING,
+            gender = GenderCategory.BROTHERS,
+            teacherName = "مشايخ الإقراء المعتمدون",
+            isLiveNow = false,
+            membersCount = 15,
+            currentSurah = "سورة آل عمران والنساء",
+            liveRoomId = "room-m-evening"
+        ),
+        HalqahGroup(
+            id = "grp_m_night",
+            nameAr = "حلقات الذكور - الفترة الليلية (العشاء والسحر)",
+            nameEn = "Brothers Halaqat - Night Session",
+            timeSlot = GroupTimeSlot.NIGHT,
+            gender = GenderCategory.BROTHERS,
+            teacherName = "مشايخ الحفظ والإجازة بالسند",
+            isLiveNow = true,
+            membersCount = 22,
+            currentSurah = "عرض الختمات والمراجعة المكثفة",
+            liveRoomId = "room-m-night"
+        ),
+        HalqahGroup(
+            id = "grp_f_morning",
+            nameAr = "حلقات الإناث - الفترة الصباحية (الفجر والضحى)",
+            nameEn = "Sisters Halaqat - Morning Session",
+            timeSlot = GroupTimeSlot.MORNING,
+            gender = GenderCategory.SISTERS,
+            teacherName = "المعلمات المسندات الفضليات",
+            isLiveNow = true,
+            membersCount = 16,
+            currentSurah = "سورة البقرة والتلقين",
+            liveRoomId = "room-f-morning"
+        ),
+        HalqahGroup(
+            id = "grp_f_evening",
+            nameAr = "حلقات الإناث - الفترة المسائية (العصر والمغرب)",
+            nameEn = "Sisters Halaqat - Evening Session",
+            timeSlot = GroupTimeSlot.EVENING,
+            gender = GenderCategory.SISTERS,
+            teacherName = "المعلمات المقرئات",
+            isLiveNow = false,
+            membersCount = 14,
+            currentSurah = "الحفظ والمراجعة",
+            liveRoomId = "room-f-evening"
+        ),
+        HalqahGroup(
+            id = "grp_f_night",
+            nameAr = "حلقات الإناث - الفترة الليلية (العشاء والسحر)",
+            nameEn = "Sisters Halaqat - Night Session",
+            timeSlot = GroupTimeSlot.NIGHT,
+            gender = GenderCategory.SISTERS,
+            teacherName = "نخبة المعلمات المسندات",
+            isLiveNow = true,
+            membersCount = 19,
+            currentSurah = "عرض الختمات والإتقان",
+            liveRoomId = "room-f-night"
+        ),
+        HalqahGroup(
+            id = "grp_general",
+            nameAr = "الملتقى القرآني العام (كافة الطلاب والمعلمين)",
+            nameEn = "General Quranic Forum",
+            timeSlot = GroupTimeSlot.MORNING,
+            gender = GenderCategory.GENERAL,
+            teacherName = "إدارة المقرأة وهيئة الإقراء",
+            isLiveNow = true,
+            membersCount = 45,
+            currentSurah = "مذاكرة أحكام التجويد والمتون والفوائد",
+            liveRoomId = "room-general"
+        )
     )
+
+    val groupsList = vmGroups ?: defaultList
 
     var activeGroupDialog by remember { mutableStateOf<HalqahGroup?>(null) }
 
@@ -185,11 +269,28 @@ fun GroupsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedButton(
+                        onClick = {
+                            com.example.util.SmartNotificationManager.notifyHalaqahLive(
+                                context,
+                                grp.nameAr,
+                                grp.teacherName
+                            )
+                            Toast.makeText(context, "تم إرسال تذكير الحلقة لشريط التنبيهات 🔔", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("تنبيهي على لوحة الإشعارات 🔔", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             },
             confirmButton = {
                 Button(onClick = { activeGroupDialog = null }) {
-                    Text(text = "حسناً")
+                    Text(text = "إغلاق")
                 }
             }
         )

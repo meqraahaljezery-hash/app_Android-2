@@ -15,6 +15,9 @@ class MainActivity : ComponentActivity() {
         // Configure Firebase App Check with launch intent before any UI or Firebase operations
         configureAppCheck(this, intent)
 
+        // تهيئة قنوات الإشعارات الذكية في شريط إشعارات الجوال
+        com.example.util.SmartNotificationManager.initChannels(this)
+
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {

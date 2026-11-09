@@ -45,7 +45,6 @@ fun AppNavigation(
     val navController = rememberNavController()
     var currentLanguage by remember { mutableStateOf(AppLanguage.ARABIC) }
 
-    // طلب إذن الإشعارات الذكية في أندرويد 13+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -68,10 +67,9 @@ fun AppNavigation(
 
     var showUnauthorizedAdminDialog by remember { mutableStateOf(false) }
 
-    // Enforce Layout Direction (RTL for Arabic, LTR for English and Amharic)
     CompositionLocalProvider(LocalLayoutDirection provides currentLanguage.layoutDirection) {
 
-        // 1. شاشة التحميل (لمنع ظهور شاشة الدخول لثانية أثناء جلب البيانات من Firebase)
+        // 1. شاشة التحميل
         if (isLoadingAuth) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -79,7 +77,7 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 2. شاشة الترحيب (إذا لم تكتمل)
+        // 2. شاشة الترحيب
         if (!isOnboardingCompleted) {
             OnboardingScreen(
                 currentLanguage = currentLanguage,
@@ -89,7 +87,7 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 3. شاشة تسجيل الدخول (تظهر تلقائياً إذا لم يوجد مستخدم مسجل)
+        // 3. شاشة تسجيل الدخول
         if (currentUser == null) {
             AuthScreen(
                 currentLanguage = currentLanguage,
@@ -111,7 +109,7 @@ fun AppNavigation(
             return@CompositionLocalProvider
         }
 
-        // 4. الواجهة الرئيسية للتطبيق (تظهر تلقائياً بمجرد نجاح تسجيل الدخول)
+        // 4. الواجهة الرئيسية (يتم الانتقال إليها تلقائياً بمجرد أن يصبح currentUser غير فارغ)
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
@@ -142,7 +140,6 @@ fun AppNavigation(
                             horizontalArrangement = Arrangement.SpaceAround,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // 1. حسابي
                             BottomNavItem(
                                 selected = currentRoute == Screen.Profile.route,
                                 icon = Icons.Default.Person,
@@ -156,7 +153,6 @@ fun AppNavigation(
                                 }
                             )
 
-                            // 2. باقاتي
                             BottomNavItem(
                                 selected = currentRoute == Screen.Packages.route,
                                 icon = Icons.Default.Payment,
@@ -170,7 +166,6 @@ fun AppNavigation(
                                 }
                             )
 
-                            // 3. الرئيسية (الزر الكبير في المنتصف)
                             Box(
                                 modifier = Modifier
                                     .offset(y = (-10).dp)
@@ -199,7 +194,6 @@ fun AppNavigation(
                                 )
                             }
 
-                            // 4. المحادثات
                             BottomNavItem(
                                 selected = currentRoute == Screen.Chats.route,
                                 icon = Icons.Default.Chat,
@@ -213,7 +207,6 @@ fun AppNavigation(
                                 }
                             )
 
-                            // 5. الإدارة (تظهر فقط للمشرف)
                             if (isAdmin) {
                                 BottomNavItem(
                                     selected = currentRoute == Screen.Admin.route,
@@ -281,7 +274,6 @@ fun AppNavigation(
             }
         }
 
-        // Unauthorized Admin Dialog
         if (showUnauthorizedAdminDialog) {
             AlertDialog(
                 onDismissRequest = { showUnauthorizedAdminDialog = false },

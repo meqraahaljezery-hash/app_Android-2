@@ -340,12 +340,3 @@ fun BottomNavItem(
         )
     }
 }
-
-// ✅ تعريف مسارات التنقل (ضروري جداً لكي يعمل الكود بدون أخطاء)
-sealed class Screen(val route: String) {
-    object Home : Screen("home")
-    object Profile : Screen("profile")
-    object Packages : Screen("packages")
-    object Chats : Screen("chats")
-    object Admin : Screen("admin")
-}

@@ -1,6 +1,7 @@
 package com.example.viewmodel
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.*
@@ -23,35 +24,35 @@ class MaqraahViewModel : ViewModel() {
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
-    // --- إعدادات Firebase الجديدة ---
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    // حالة التحميل لمنع ظهور شاشة الدخول لثانية عند فتح التطبيق
     private val _isLoadingAuth = MutableStateFlow(true)
     val isLoadingAuth: StateFlow<Boolean> = _isLoadingAuth.asStateFlow()
 
-    // 1. Onboarding State
     private val _isOnboardingCompleted = MutableStateFlow(false)
     val isOnboardingCompleted: StateFlow<Boolean> = _isOnboardingCompleted.asStateFlow()
 
-    // 2. Current User (Null until real sign in)
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
     init {
-        // الاستماع لحالة تسجيل الدخول في Firebase وجلب بيانات المستخدم تلقائياً
         auth.addAuthStateListener { firebaseAuth ->
             val firebaseUser = firebaseAuth.currentUser
             if (firebaseUser != null) {
                 db.collection("users").document(firebaseUser.uid).get()
                     .addOnSuccessListener { document ->
                         if (document.exists()) {
-                            _currentUser.value = document.toObject(User::class.java)
+                            try {
+                                _currentUser.value = document.toObject(User::class.java)
+                            } catch (e: Exception) {
+                                Log.e("FIREBASE_ERROR", "Mapping error: ${e.message}")
+                            }
                         }
                         _isLoadingAuth.value = false
                     }
-                    .addOnFailureListener {
+                    .addOnFailureListener { e ->
+                        Log.e("FIREBASE_ERROR", "Fetch error: ${e.message}")
                         _isLoadingAuth.value = false
                     }
             } else {
@@ -140,7 +141,7 @@ class MaqraahViewModel : ViewModel() {
     private val _enrollmentRequests = MutableStateFlow<List<EnrollmentRequest>>(emptyList())
     val enrollmentRequests: StateFlow<List<EnrollmentRequest>> = _enrollmentRequests.asStateFlow()
 
-    // 5. Official Packages (7 Packages from Spec)
+    // 5. Official Packages
     private val _minutePackages = MutableStateFlow(
         listOf(
             MinutePackage("pkg_1", "الفضية العادية", "Silver Package", 100, 500, false, listOf("100 دقيقة تسميع", "صلاحية 30 يوم", "دخول الحلقات العامة")),
@@ -169,23 +170,23 @@ class MaqraahViewModel : ViewModel() {
     private val _paymentRequests = MutableStateFlow<List<PaymentRequest>>(emptyList())
     val paymentRequests: StateFlow<List<PaymentRequest>> = _paymentRequests.asStateFlow()
 
-    // 8. Credit Ledger (Immutable Financial History)
+    // 8. Credit Ledger
     private val _creditLedger = MutableStateFlow<List<MinuteLedgerEntry>>(emptyList())
     val creditLedger: StateFlow<List<MinuteLedgerEntry>> = _creditLedger.asStateFlow()
 
-    // 9. Announcements (Starts clean for real admin posts)
+    // 9. Announcements
     private val _announcements = MutableStateFlow<List<Announcement>>(emptyList())
     val announcements: StateFlow<List<Announcement>> = _announcements.asStateFlow()
 
-    // 10. Quran Posts (Starts clean for real posts)
+    // 10. Quran Posts
     private val _quranPosts = MutableStateFlow<List<QuranPost>>(emptyList())
     val quranPosts: StateFlow<List<QuranPost>> = _quranPosts.asStateFlow()
 
-    // 11. Notifications (Starts clean for real user events)
+    // 11. Notifications
     private val _notifications = MutableStateFlow<List<AppNotification>>(emptyList())
     val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
-    // 12. Groups (The 7 Specific Groups: 6 Gender x Time Slot + 1 General Forum)
+    // 12. Groups
     private val _groups = MutableStateFlow(
         listOf(
             HalqahGroup(
@@ -319,7 +320,7 @@ class MaqraahViewModel : ViewModel() {
     )
     val groups: StateFlow<List<HalqahGroup>> = _groups.asStateFlow()
 
-    // 13. Managed Students Directory (Starts clean, dynamic real accounts only)
+    // 13. Managed Students Directory
     private val _students = MutableStateFlow<List<User>>(emptyList())
     val students: StateFlow<List<User>> = _students.asStateFlow()
 
@@ -378,7 +379,7 @@ class MaqraahViewModel : ViewModel() {
                 clean == "admin@aljazari.org"
     }
 
-    // التعديل الجديد: دالة تسجيل الدخول التي تستخدم Firebase Auth وتجلب البيانات من Firestore
+    // ✅ الدالة المعدلة لحل مشكلة الدخول
     fun registerOrSignInStudent(
         email: String,
         name: String,
@@ -396,103 +397,133 @@ class MaqraahViewModel : ViewModel() {
             else -> "طالب المقرأة"
         }
 
-        val dummyPassword = "123456" // كلمة مرور افتراضية لأن شاشة الدخول لا تحتوي على حقل كلمة مرور
+        val dummyPassword = "123456"
 
         auth.signInWithEmailAndPassword(cleanEmail, dummyPassword)
-            .addOnFailureListener {
-                // إذا لم يكن الحساب موجوداً، نقوم بإنشائه
-                auth.createUserWithEmailAndPassword(cleanEmail, dummyPassword)
+            .addOnCompleteListener { signInTask ->
+                if (signInTask.isSuccessful) {
+                    handleUserSession(signInTask.result?.user?.uid, cleanEmail, displayName, role, phone, gender, targetProgram, isAdmin)
+                } else {
+                    auth.createUserWithEmailAndPassword(cleanEmail, dummyPassword)
+                        .addOnCompleteListener { createTask ->
+                            if (createTask.isSuccessful) {
+                                handleUserSession(createTask.result?.user?.uid, cleanEmail, displayName, role, phone, gender, targetProgram, isAdmin)
+                            } else {
+                                Log.e("FIREBASE_ERROR", "Auth failed: ${createTask.exception?.message}")
+                                _isLoadingAuth.value = false
+                            }
+                        }
+                }
             }
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val firebaseUser = auth.currentUser
-                    val userId = firebaseUser?.uid ?: UUID.randomUUID().toString()
+    }
 
-                    // جلب بيانات المستخدم من قاعدة البيانات
-                    db.collection("users").document(userId).get().addOnSuccessListener { doc ->
-                        if (doc.exists()) {
-                            _currentUser.value = doc.toObject(User::class.java)
+    private fun handleUserSession(
+        userId: String?,
+        email: String,
+        displayName: String,
+        role: UserRole,
+        phone: String,
+        gender: String,
+        targetProgram: String,
+        isAdmin: Boolean
+    ) {
+        if (userId == null) return
+        val userDocRef = db.collection("users").document(userId)
+        
+        userDocRef.get().addOnCompleteListener { docTask ->
+            if (docTask.isSuccessful) {
+                val document = docTask.result
+                if (document != null && document.exists()) {
+                    try {
+                        val user = document.toObject(User::class.java)
+                        _currentUser.value = user
+                        _isOnboardingCompleted.value = true
+                        _isLoadingAuth.value = false
+                    } catch (e: Exception) {
+                        Log.e("FIREBASE_ERROR", "Mapping error: ${e.message}")
+                        _isLoadingAuth.value = false
+                    }
+                } else {
+                    val newUser = User(
+                        id = userId,
+                        name = displayName,
+                        email = email,
+                        role = role,
+                        studentCode = if (isAdmin) "ADM-001" else "JZR-${(1000..9999).random()}",
+                        phone = if (phone.isNotBlank()) phone.trim() else (if (isAdmin) "+251 990 161 372" else "+251 912 000 000"),
+                        gender = gender,
+                        minuteBalance = 0,
+                        tajweedLevel = if (isAdmin) "مقرئ مسند بالقراءات العشر" else "طالب مسجل جديد",
+                        sanadTrack = if (isAdmin) "إشراف هيئة الإقراء والسند" else targetProgram,
+                        bio = if (isAdmin) "الحساب الإداري الرسمي لمقرأة الإمام الجزري" else "طالب علم في $targetProgram"
+                    )
+                    userDocRef.set(newUser).addOnCompleteListener { setTask ->
+                        if (setTask.isSuccessful) {
+                            _currentUser.value = newUser
                             _isOnboardingCompleted.value = true
                             _isLoadingAuth.value = false
-                        } else {
-                            val user = User(
-                                id = userId,
-                                name = displayName,
-                                email = email.trim(),
-                                role = role,
-                                studentCode = if (isAdmin) "ADM-001" else "JZR-${(1000..9999).random()}",
-                                phone = if (phone.isNotBlank()) phone.trim() else (if (isAdmin) "+251 990 161 372" else "+251 912 000 000"),
-                                gender = gender,
-                                minuteBalance = 0, // تم التعديل: الرصيد صفر للجميع
-                                tajweedLevel = if (isAdmin) "مقرئ مسند بالقراءات العشر" else "طالب مسجل جديد",
-                                sanadTrack = if (isAdmin) "إشراف هيئة الإقراء والسند" else targetProgram,
-                                bio = if (isAdmin) "الحساب الإداري الرسمي لمقرأة الإمام الجزري للإقراء والإجازة بالسند المتصل" else "طالب علم في $targetProgram"
-                            )
-                            db.collection("users").document(userId).set(user).addOnSuccessListener {
-                                _currentUser.value = user
-                                _isOnboardingCompleted.value = true
-                                _isLoadingAuth.value = false
-
-                                if (role == UserRole.STUDENT) {
-                                    // إضافة الطالب تلقائياً وبشكل فوري لقائمة المدير
-                                    val existingIndex = _students.value.indexOfFirst { it.email.equals(user.email, ignoreCase = true) }
-                                    if (existingIndex >= 0) {
-                                        val updated = _students.value.toMutableList()
-                                        updated[existingIndex] = user
-                                        _students.value = updated
-                                    } else {
-                                        _students.value = listOf(user) + _students.value
-                                    }
-
-                                    // إنشاء طلب تسجيل فوري في قائمة طلبات المدير
-                                    val enrollmentReq = EnrollmentRequest(
-                                        id = "enr_${UUID.randomUUID().toString().take(6)}",
-                                        studentId = user.id,
-                                        studentName = user.name,
-                                        studentCode = user.studentCode,
-                                        programId = "prog_auto",
-                                        programTitle = targetProgram,
-                                        age = 22,
-                                        gender = gender,
-                                        city = "مسجل عبر الاستمارة",
-                                        contactPhone = user.phone,
-                                        currentMemorization = "مسجل جديد",
-                                        previousExperience = "تم التسجيل عبر استمارة المقرأة",
-                                        preferredTimeSlot = "حسب توفر الحلقات",
-                                        status = "PENDING",
-                                        submittedAt = dateFormat.format(Date())
-                                    )
-                                    _enrollmentRequests.value = listOf(enrollmentReq) + _enrollmentRequests.value
-
-                                    // إشعار فوري
-                                    val notif = AppNotification(
-                                        id = "notif_${System.currentTimeMillis()}",
-                                        title = "تم استلام استمارة التسجيل",
-                                        message = "أهلاً بك يا ${user.name} في مقرأة الإمام الجزري، تم إرسال ملفك للإدارة العامة للمراجعة والاعتماد.",
-                                        date = dateFormat.format(Date()),
-                                        type = "REGISTRATION",
-                                        isRead = false
-                                    )
-                                    _notifications.value = listOf(notif) + _notifications.value
+                            
+                            if (role == UserRole.STUDENT) {
+                                val existingIndex = _students.value.indexOfFirst { it.email.equals(newUser.email, ignoreCase = true) }
+                                if (existingIndex >= 0) {
+                                    val updated = _students.value.toMutableList()
+                                    updated[existingIndex] = newUser
+                                    _students.value = updated
+                                } else {
+                                    _students.value = listOf(newUser) + _students.value
                                 }
+
+                                val enrollmentReq = EnrollmentRequest(
+                                    id = "enr_${UUID.randomUUID().toString().take(6)}",
+                                    studentId = newUser.id,
+                                    studentName = newUser.name,
+                                    studentCode = newUser.studentCode,
+                                    programId = "prog_auto",
+                                    programTitle = targetProgram,
+                                    age = 22,
+                                    gender = gender,
+                                    city = "مسجل عبر الاستمارة",
+                                    contactPhone = newUser.phone,
+                                    currentMemorization = "مسجل جديد",
+                                    previousExperience = "تم التسجيل عبر استمارة المقرأة",
+                                    preferredTimeSlot = "حسب توفر الحلقات",
+                                    status = "PENDING",
+                                    submittedAt = dateFormat.format(Date())
+                                )
+                                _enrollmentRequests.value = listOf(enrollmentReq) + _enrollmentRequests.value
+
+                                val notif = AppNotification(
+                                    id = "notif_${System.currentTimeMillis()}",
+                                    title = "تم استلام استمارة التسجيل",
+                                    message = "أهلاً بك يا ${newUser.name} في مقرأة الإمام الجزري، تم إرسال ملفك للإدارة العامة للمراجعة والاعتماد.",
+                                    date = dateFormat.format(Date()),
+                                    type = "REGISTRATION",
+                                    isRead = false
+                                )
+                                _notifications.value = listOf(notif) + _notifications.value
                             }
+                        } else {
+                            Log.e("FIREBASE_ERROR", "Set error: ${setTask.exception?.message}")
+                            _isLoadingAuth.value = false
                         }
                     }
                 }
+            } else {
+                Log.e("FIREBASE_ERROR", "Fetch error: ${docTask.exception?.message}")
+                _isLoadingAuth.value = false
             }
+        }
     }
 
     fun signInWithGoogle(email: String, name: String) {
         registerOrSignInStudent(email, name)
     }
 
-    // التعديل الجديد: تسجيل الخروج
     fun signOut() {
         auth.signOut()
         _currentUser.value = null
     }
 
-    // التعديل الجديد: تحديث الملف الشخصي في قاعدة البيانات
     fun updateProfile(name: String, bio: String, phone: String, city: String) {
         val current = _currentUser.value ?: return
         val updatedUser = current.copy(name = name, bio = bio, phone = phone, city = city)
@@ -500,7 +531,6 @@ class MaqraahViewModel : ViewModel() {
         db.collection("users").document(current.id).set(updatedUser)
     }
 
-    // Submit Program Enrollment Request
     fun submitEnrollmentRequest(
         program: Program,
         age: Int,
@@ -512,8 +542,6 @@ class MaqraahViewModel : ViewModel() {
         timeSlot: String
     ): Boolean {
         val user = _currentUser.value ?: return false
-
-        // Check if student is already enrolled or pending in a conflicting program
         val hasConflicting = _enrollmentRequests.value.any {
             it.studentId == user.id && it.programId == program.id && it.status != "REJECTED"
         }
@@ -538,7 +566,6 @@ class MaqraahViewModel : ViewModel() {
         )
         _enrollmentRequests.value = listOf(newRequest) + _enrollmentRequests.value
 
-        // Immediate notification for student
         val notif = AppNotification(
             id = "notif_${UUID.randomUUID().toString().take(6)}",
             title = "تم استلام طلب التسجيل",
@@ -575,7 +602,6 @@ class MaqraahViewModel : ViewModel() {
         }
     }
 
-    // Submit Payment Recharge Request with Receipt Image
     fun submitPaymentRequest(
         pkg: MinutePackage,
         targetBank: String,
@@ -604,7 +630,6 @@ class MaqraahViewModel : ViewModel() {
         )
         _paymentRequests.value = listOf(newPayment) + _paymentRequests.value
 
-        // Immediate notification for student
         val notif = AppNotification(
             id = "notif_${UUID.randomUUID().toString().take(6)}",
             title = "تم إرسال إشعار شحن الرصيد",
@@ -617,17 +642,14 @@ class MaqraahViewModel : ViewModel() {
         return true
     }
 
-    // Approve Payment Request (Atomically adds minutes to student balance and records in Ledger)
     fun approvePayment(paymentId: String) {
         val payment = _paymentRequests.value.find { it.id == paymentId } ?: return
         if (payment.status == PaymentStatus.APPROVED) return
 
-        // 1. Mark payment approved
         _paymentRequests.value = _paymentRequests.value.map {
             if (it.id == paymentId) it.copy(status = PaymentStatus.APPROVED, reviewedByAdmin = "خالد أحمد مصطفى") else it
         }
 
-        // 2. Add minutes to user if user is currently loaded or matches student
         val user = _currentUser.value
         val before = user?.minuteBalance ?: 0
         val after = before + payment.packageMinutes
@@ -635,15 +657,13 @@ class MaqraahViewModel : ViewModel() {
         if (user != null && user.id == payment.studentId) {
             val updatedUser = user.copy(minuteBalance = after)
             _currentUser.value = updatedUser
-            db.collection("users").document(user.id).set(updatedUser) // حفظ في Firebase
+            db.collection("users").document(user.id).set(updatedUser)
         }
 
-        // Also update in _students list
         _students.value = _students.value.map {
             if (it.id == payment.studentId) it.copy(minuteBalance = it.minuteBalance + payment.packageMinutes) else it
         }
 
-        // 3. Record in Credit Ledger
         val ledgerEntry = MinuteLedgerEntry(
             id = "led_${UUID.randomUUID().toString().take(6)}",
             studentId = payment.studentId,
@@ -658,7 +678,6 @@ class MaqraahViewModel : ViewModel() {
         )
         _creditLedger.value = listOf(ledgerEntry) + _creditLedger.value
 
-        // 4. Send Notification
         val notif = AppNotification(
             id = "notif_${UUID.randomUUID().toString().take(6)}",
             title = "تم شحن الرصيد بنجاح",
@@ -685,8 +704,6 @@ class MaqraahViewModel : ViewModel() {
     fun deletePaymentRequest(paymentId: String) {
         _paymentRequests.value = _paymentRequests.value.filter { it.id != paymentId }
     }
-
-    // --- STUDENT DIRECTORY ACTIONS (ADMIN) ---
 
     fun activateStudent(studentId: String) {
         _students.value = _students.value.map {
@@ -737,12 +754,11 @@ class MaqraahViewModel : ViewModel() {
             } else it
         }
 
-        // If current user is this student, update too
         if (_currentUser.value?.id == studentId) {
             val updatedUser = _currentUser.value?.copy(minuteBalance = afterBal)
             _currentUser.value = updatedUser
             if (updatedUser != null) {
-                db.collection("users").document(updatedUser.id).set(updatedUser) // حفظ في Firebase
+                db.collection("users").document(updatedUser.id).set(updatedUser)
             }
         }
 
@@ -772,7 +788,6 @@ class MaqraahViewModel : ViewModel() {
     }
 
     fun sendStudentAlert(studentId: String, alertMessage: String) {
-        val student = _students.value.find { it.id == studentId }
         val notif = AppNotification(
             id = "notif_${UUID.randomUUID().toString().take(6)}",
             title = "تنبيه إداري من إدارة المقرأة",
@@ -783,8 +798,6 @@ class MaqraahViewModel : ViewModel() {
         )
         _notifications.value = listOf(notif) + _notifications.value
     }
-
-    // --- QURAN SESSION DEDUCTION (خصم الجلسة القرآنية) ---
 
     fun deductQuranSession(
         studentId: String,
@@ -798,21 +811,18 @@ class MaqraahViewModel : ViewModel() {
         val before = student.minuteBalance
         val after = before - minutes
 
-        // Update student in list
         _students.value = _students.value.map {
             if (it.id == studentId) it.copy(minuteBalance = after) else it
         }
 
-        // If current user is this student, update too
         if (_currentUser.value?.id == studentId) {
             val updatedUser = _currentUser.value?.copy(minuteBalance = after)
             _currentUser.value = updatedUser
             if (updatedUser != null) {
-                db.collection("users").document(updatedUser.id).set(updatedUser) // حفظ في Firebase
+                db.collection("users").document(updatedUser.id).set(updatedUser)
             }
         }
 
-        // Immutable Ledger Entry
         val ledgerEntry = MinuteLedgerEntry(
             id = "led_${UUID.randomUUID().toString().take(6)}",
             studentId = studentId,
@@ -827,7 +837,6 @@ class MaqraahViewModel : ViewModel() {
         )
         _creditLedger.value = listOf(ledgerEntry) + _creditLedger.value
 
-        // Immediate Notification
         val notif = AppNotification(
             id = "notif_${UUID.randomUUID().toString().take(6)}",
             title = "تم تسجيل جلسة تسميع وخصم $minutes دقيقة",
@@ -840,8 +849,6 @@ class MaqraahViewModel : ViewModel() {
         return true
     }
 
-    // --- NOTIFICATIONS MANAGEMENT ---
-
     fun markAllNotificationsAsRead() {
         _notifications.value = _notifications.value.map { it.copy(isRead = true) }
     }
@@ -851,8 +858,6 @@ class MaqraahViewModel : ViewModel() {
             if (it.id == id) it.copy(isRead = true) else it
         }
     }
-
-    // --- PUBLISHING ACTIONS (ANNOUNCEMENTS & STATUSES) ---
 
     fun addAnnouncement(title: String, content: String, isPinned: Boolean) {
         val newAnc = Announcement(
@@ -865,7 +870,6 @@ class MaqraahViewModel : ViewModel() {
         )
         _announcements.value = listOf(newAnc) + _announcements.value
 
-        // Also broadcast notification
         val notif = AppNotification(
             id = "notif_${UUID.randomUUID().toString().take(6)}",
             title = "إعلان رسمي جديد: $title",
@@ -897,7 +901,7 @@ class MaqraahViewModel : ViewModel() {
         val after = (before + amount).coerceAtLeast(0)
         val updatedUser = user.copy(minuteBalance = after)
         _currentUser.value = updatedUser
-        db.collection("users").document(user.id).set(updatedUser) // حفظ في Firebase
+        db.collection("users").document(user.id).set(updatedUser)
 
         val entry = MinuteLedgerEntry(
             id = "led_${UUID.randomUUID().toString().take(6)}",
@@ -941,13 +945,10 @@ class MaqraahViewModel : ViewModel() {
         val currentList = _messages.value[conversationId] ?: emptyList()
         _messages.value = _messages.value + (conversationId to (currentList + newMsg))
 
-        // Update conversation last message
         _conversations.value = _conversations.value.map {
             if (it.id == conversationId) it.copy(lastMessage = text, lastMessageTime = "الآن") else it
         }
     }
-
-    // --- TELEGRAM-STYLE GROUP CHAT & ADMIN GROUP CREATION ---
 
     fun updateGroupTelegramLink(groupId: String, link: String) {
         val trimmed = link.trim()
@@ -1005,10 +1006,6 @@ class MaqraahViewModel : ViewModel() {
         _messages.value = _messages.value + (groupId to (currentList + newMsg))
     }
 
-    // =========================================================================
-    // نظام البث المباشر والصوت التفاعلي LiveKit والطابور الذكي (1-on-1 Recitation)
-    // =========================================================================
-
     private val activeSessionJobMap = mutableMapOf<String, Job>()
 
     private fun sendSystemGroupMessage(groupId: String, text: String) {
@@ -1027,7 +1024,6 @@ class MaqraahViewModel : ViewModel() {
         _messages.value = _messages.value + (groupId to (currentList + newMsg))
     }
 
-    // 1. بدء البث المباشر للحلقة (صلاحية المشرف / المعلم)
     fun startGroupBroadcast(groupId: String, context: Context?) {
         val user = _currentUser.value ?: return
         val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
@@ -1062,7 +1058,6 @@ class MaqraahViewModel : ViewModel() {
         )
     }
 
-    // 2. إنهاء البث المباشر العام للحلقة
     fun endGroupBroadcast(groupId: String, context: Context?) {
         val user = _currentUser.value ?: return
         val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
@@ -1092,12 +1087,10 @@ class MaqraahViewModel : ViewModel() {
         sendSystemGroupMessage(groupId, "⏹️ تم إنهاء جلسة البث المباشر للحلقة. بارك الله في جميع الطلاب والمعلمين.")
     }
 
-    // 3. أخذ دور في طابور القراءة (للطلاب)
     fun joinRecitationQueue(groupId: String, targetSurah: String = "تسميع المقرر") {
         val user = _currentUser.value ?: return
         val grp = _groups.value.find { it.id == groupId } ?: return
 
-        // منع التكرار إذا كان الطالب في الطابور بالفعل
         if (grp.queue.any { it.studentId == user.id }) return
 
         val nextNumber = (grp.queue.maxOfOrNull { it.queueNumber } ?: 0) + 1
@@ -1125,7 +1118,6 @@ class MaqraahViewModel : ViewModel() {
         )
     }
 
-    // 4. مغادرة طابور القراءة
     fun leaveRecitationQueue(groupId: String) {
         val user = _currentUser.value ?: return
         _groups.value = _groups.value.map { g ->
@@ -1135,7 +1127,6 @@ class MaqraahViewModel : ViewModel() {
         }
     }
 
-    // 5. قبول وإدخال الطالب إلى البث المباشر (صلاحية المعلم / المشرف)
     fun admitStudentToLiveSession(groupId: String, studentId: String, context: Context?) {
         val user = _currentUser.value ?: return
         val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
@@ -1181,7 +1172,6 @@ class MaqraahViewModel : ViewModel() {
             } else g
         }
 
-        // تشغيل مؤقت العد التصاعدي الدقيق للجلسة بالثواني
         activeSessionJobMap[groupId]?.cancel()
         activeSessionJobMap[groupId] = viewModelScope.launch {
             while (isActive) {
@@ -1215,7 +1205,6 @@ class MaqraahViewModel : ViewModel() {
         )
     }
 
-    // 6. إيقاف مؤقت أو استئناف عداد جلسة التسميع
     fun toggleSessionTimer(groupId: String) {
         _groups.value = _groups.value.map { g ->
             if (g.id == groupId && g.activeSession != null) {
@@ -1225,7 +1214,6 @@ class MaqraahViewModel : ViewModel() {
         }
     }
 
-    // 7. إنهاء جلسة الطالب والخصم التلقائي الدقيق من الرصيد بدون كتابة يدوية
     fun endStudentSessionAndDeduct(groupId: String, notes: String = "", context: Context?) {
         val user = _currentUser.value ?: return
         val isAdmin = isAdminEmail(user.email) || user.role == UserRole.ADMIN
@@ -1240,7 +1228,6 @@ class MaqraahViewModel : ViewModel() {
         val durationSeconds = session.elapsedSeconds
         val exactDeductedMinutes = maxOf(1, ceil(durationSeconds / 60.0).toInt())
 
-        // تحديث رصيد الطالب تلقائياً في قاعدة البيانات
         val student = _students.value.find { it.id == session.studentId }
         val oldBalance = student?.minuteBalance ?: _currentUser.value?.minuteBalance ?: 60
         val newBalance = maxOf(0, oldBalance - exactDeductedMinutes)
@@ -1254,11 +1241,10 @@ class MaqraahViewModel : ViewModel() {
             val updatedUser = _currentUser.value?.copy(minuteBalance = newBalance)
             _currentUser.value = updatedUser
             if (updatedUser != null) {
-                db.collection("users").document(updatedUser.id).set(updatedUser) // حفظ في Firebase
+                db.collection("users").document(updatedUser.id).set(updatedUser)
             }
         }
 
-        // توثيق العملية في دفتر السجلات والحسابات (Credit Ledger)
         val ledger = MinuteLedgerEntry(
             id = "led_${UUID.randomUUID().toString().take(6)}",
             studentId = session.studentId,

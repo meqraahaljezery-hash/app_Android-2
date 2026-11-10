@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
@@ -80,9 +81,11 @@ fun ChatsScreen(
         val msgs = allMessages[grp.id] ?: emptyList()
         var groupTextToSend by remember { mutableStateOf("") }
         
-        // أداة للتمرير التلقائي
+        // أداة للتمرير التلقائي للأعلى عند وصول رسالة جديدة أو عند فتح لوحة المفاتيح
         val listState = rememberLazyListState()
-        LaunchedEffect(msgs.size) {
+        val density = LocalDensity.current
+        val imeBottom = WindowInsets.ime.getBottom(density)
+        LaunchedEffect(msgs.size, imeBottom) {
             if (msgs.isNotEmpty()) {
                 listState.animateScrollToItem(msgs.size - 1)
             }
@@ -217,7 +220,10 @@ fun ChatsScreen(
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 6.dp,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
                 ) {
                     Row(
                         modifier = Modifier
@@ -666,9 +672,11 @@ fun ChatsScreen(
         val msgs = allMessages[conv.id] ?: emptyList()
         var textToSend by remember { mutableStateOf("") }
         
-        // أداة للتمرير التلقائي
+        // أداة للتمرير التلقائي للأعلى عند وصول رسالة جديدة أو عند فتح لوحة المفاتيح
         val listState = rememberLazyListState()
-        LaunchedEffect(msgs.size) {
+        val density = LocalDensity.current
+        val imeBottom = WindowInsets.ime.getBottom(density)
+        LaunchedEffect(msgs.size, imeBottom) {
             if (msgs.isNotEmpty()) {
                 listState.animateScrollToItem(msgs.size - 1)
             }
@@ -711,7 +719,10 @@ fun ChatsScreen(
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 6.dp,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
                 ) {
                     Row(
                         modifier = Modifier

@@ -39,8 +39,15 @@ import com.example.data.model.User
 import com.example.i18n.AppLanguage
 import com.example.i18n.Strings
 import com.example.ui.theme.CairoFontFamily
+import com.example.ui.theme.TajawalFontFamily
 import com.example.ui.theme.IslamicEmerald
+import com.example.ui.theme.IslamicEmeraldDark
+import com.example.ui.theme.IslamicEmeraldContainer
 import com.example.ui.theme.IslamicGold
+import com.example.ui.theme.SurfaceBorderDecor
+import com.example.ui.theme.AppThemeMode
+import com.example.ui.theme.LocalThemeMode
+import com.example.ui.theme.LocalThemeModeController
 import com.example.ui.theme.NotoSansEthiopicFontFamily
 import com.example.util.SmartNotificationManager
 import com.example.viewmodel.MaqraahViewModel
@@ -129,6 +136,38 @@ fun HomeScreen(
                         IconButton(onClick = { showNotificationsDialog = true }) {
                             Icon(Icons.Default.Notifications, contentDescription = "مركز الإشعارات", tint = MaterialTheme.colorScheme.primary)
                         }
+                    }
+
+                    val currentThemeMode = LocalThemeMode.current
+                    val themeController = LocalThemeModeController.current
+                    IconButton(
+                        onClick = {
+                            val nextMode = when (currentThemeMode) {
+                                AppThemeMode.NIGHT -> AppThemeMode.LIGHT
+                                AppThemeMode.LIGHT -> AppThemeMode.DYNAMIC
+                                AppThemeMode.DYNAMIC -> AppThemeMode.SYSTEM
+                                AppThemeMode.SYSTEM -> AppThemeMode.NIGHT
+                            }
+                            themeController(nextMode)
+                            val modeToast = when (nextMode) {
+                                AppThemeMode.NIGHT -> "تم تفعيل الوضع الليلي والتهجد 🌙"
+                                AppThemeMode.LIGHT -> "تم تفعيل الوضع النهاري الفاخر ☀️"
+                                AppThemeMode.DYNAMIC -> "تم تفعيل ألوان النظام التكيفية 🎨"
+                                AppThemeMode.SYSTEM -> "تم تفعيل الوضع التلقائي للنظام ⚙️"
+                            }
+                            Toast.makeText(context, modeToast, Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = when (currentThemeMode) {
+                                AppThemeMode.NIGHT -> Icons.Default.DarkMode
+                                AppThemeMode.LIGHT -> Icons.Default.LightMode
+                                AppThemeMode.DYNAMIC -> Icons.Default.ColorLens
+                                AppThemeMode.SYSTEM -> Icons.Default.BrightnessAuto
+                            },
+                            contentDescription = "تبديل المظهر الليلي والنهاري",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
 
                     Box {
@@ -386,26 +425,124 @@ fun HomeScreen(
         }
     }
 
-    // --- DIALOG: Program Details ---
+    // --- DIALOG: Program Details (Luxury Custom Dialog) ---
     if (selectedProgramForDetails != null) {
         val prog = selectedProgramForDetails!!
-        AlertDialog(
+        Dialog(
             onDismissRequest = { selectedProgramForDetails = null },
-            title = { Text(text = prog.titleAr, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
-            text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { Text(text = "الوصف الكامل:", fontWeight = FontWeight.Bold); Text(text = prog.descriptionAr, style = MaterialTheme.typography.bodyMedium) }
-                    item { Spacer(modifier = Modifier.height(4.dp)); Text(text = "المشرف والسند:", fontWeight = FontWeight.Bold); Text(text = "${prog.instructorName} (${prog.instructorSanad})", style = MaterialTheme.typography.bodyMedium) }
-                    item { Spacer(modifier = Modifier.height(4.dp)); Text(text = "الشروط والمتطلبات:", fontWeight = FontWeight.Bold); Text(text = prog.prerequisiteAr, style = MaterialTheme.typography.bodyMedium) }
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .shadow(12.dp, RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(IslamicEmerald, IslamicEmeraldDark)
+                                )
+                            )
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.School, contentDescription = null, tint = IslamicGold, modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = prog.titleAr,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontFamily = TajawalFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                            IconButton(onClick = { selectedProgramForDetails = null }) {
+                                Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.White)
+                            }
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text("الوصف الكامل للبرنامج:", fontWeight = FontWeight.Bold, fontFamily = TajawalFontFamily, color = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = prog.descriptionAr, style = MaterialTheme.typography.bodyMedium, fontFamily = TajawalFontFamily)
+                            }
+                        }
+
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text("المشرف والسند القرآني:", fontWeight = FontWeight.Bold, fontFamily = TajawalFontFamily, color = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = "${prog.instructorName} — ${prog.instructorSanad}", style = MaterialTheme.typography.bodyMedium, fontFamily = TajawalFontFamily)
+                            }
+                        }
+
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text("الشروط والمتطلبات:", fontWeight = FontWeight.Bold, fontFamily = TajawalFontFamily, color = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = prog.prerequisiteAr, style = MaterialTheme.typography.bodyMedium, fontFamily = TajawalFontFamily)
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { selectedProgramForDetails = null },
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text("إغلاق", fontFamily = TajawalFontFamily, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = {
+                                    val toReg = selectedProgramForDetails
+                                    selectedProgramForDetails = null
+                                    selectedProgramForRegistration = toReg
+                                },
+                                modifier = Modifier.weight(1.4f).height(48.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Text("طلب التسجيل الآن", fontFamily = TajawalFontFamily, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
                 }
-            },
-            confirmButton = {
-                Button(onClick = { val toReg = selectedProgramForDetails; selectedProgramForDetails = null; selectedProgramForRegistration = toReg }) { Text(text = "طلب التسجيل الآن") }
-            },
-            dismissButton = {
-                TextButton(onClick = { selectedProgramForDetails = null }) { Text(text = "إغلاق") }
             }
-        )
+        }
     }
 
     // --- DIALOG: Full Registration Form (Premium UI) ---
@@ -416,76 +553,121 @@ fun HomeScreen(
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
             Card(
-                modifier = Modifier.fillMaxWidth(0.92f).fillMaxHeight(0.85f).shadow(16.dp, RoundedCornerShape(24.dp)),
+                modifier = Modifier
+                    .fillMaxWidth(0.94f)
+                    .fillMaxHeight(0.88f)
+                    .imePadding()
+                    .shadow(16.dp, RoundedCornerShape(24.dp)),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Header
                     Box(
-                        modifier = Modifier.fillMaxWidth().background(
-                            Brush.verticalGradient(colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))),
-                            RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                        ).padding(20.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(IslamicEmerald, IslamicEmeraldDark)
+                                ),
+                                RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                            )
+                            .padding(20.dp)
                     ) {
                         Column {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = { selectedProgramForRegistration = null }) { Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.White) }
-                                Icon(Icons.Default.School, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(36.dp))
+                                Icon(Icons.Default.School, contentDescription = null, tint = IslamicGold, modifier = Modifier.size(32.dp))
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(text = "استمارة التسجيل", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text(text = prog.titleAr, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(text = "استمارة التسجيل الرسمية", style = MaterialTheme.typography.headlineMedium, fontFamily = TajawalFontFamily, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(text = prog.titleAr, style = MaterialTheme.typography.bodyMedium, fontFamily = TajawalFontFamily, color = Color.White.copy(alpha = 0.9f))
                         }
                     }
 
                     // Scrollable Form Body
-                    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
                         if (registrationErrorMessage != null) {
-                            Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(8.dp)) {
-                                Text(text = registrationErrorMessage!!, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp))
+                            Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(14.dp)) {
+                                Text(text = registrationErrorMessage!!, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall, fontFamily = TajawalFontFamily, modifier = Modifier.padding(10.dp))
                             }
                         }
-                        
-                        // 1. الاسم (تمت إضافته)
-                        OutlinedTextField(value = regName, onValueChange = { regName = it }, label = { Text("الاسم الكامل") }, leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), singleLine = true)
 
-                        // 2. العمر (تم حذف المكرر)
-                        OutlinedTextField(value = regAge, onValueChange = { regAge = it }, label = { Text("العمر") }, leadingIcon = { Icon(Icons.Default.Cake, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), singleLine = true)
+                        // 1. الاسم
+                        OutlinedTextField(
+                            value = regName,
+                            onValueChange = { regName = it },
+                            label = { Text("الاسم الكامل", fontFamily = TajawalFontFamily) },
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            singleLine = true
+                        )
+
+                        // 2. العمر
+                        OutlinedTextField(
+                            value = regAge,
+                            onValueChange = { regAge = it },
+                            label = { Text("العمر", fontFamily = TajawalFontFamily) },
+                            leadingIcon = { Icon(Icons.Default.Cake, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            singleLine = true
+                        )
 
                         // 3. الجنس
-                        Text("الجنس", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("الجنس", style = MaterialTheme.typography.labelLarge, fontFamily = TajawalFontFamily, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             listOf("ذكر", "أنثى").forEach { option ->
                                 val isSelected = regGender == option
                                 val bgColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface, label = "bg")
                                 val borderColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, label = "border")
-                                Surface(modifier = Modifier.weight(1f).height(50.dp).clickable { regGender = option }, shape = RoundedCornerShape(12.dp), color = bgColor, border = BorderStroke(1.dp, borderColor)) {
-                                    Box(contentAlignment = Alignment.Center) { Text(text = option, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface) }
+                                Surface(
+                                    modifier = Modifier.weight(1f).height(48.dp).clickable { regGender = option },
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = bgColor,
+                                    border = BorderStroke(1.dp, borderColor)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(text = option, fontFamily = TajawalFontFamily, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                    }
                                 }
                             }
                         }
 
-                        OutlinedTextField(value = regCity, onValueChange = { regCity = it }, label = { Text("المدينة / مكان الإقامة") }, leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), singleLine = true)
-                        OutlinedTextField(value = regPhone, onValueChange = { regPhone = it }, label = { Text("وسيلة التواصل / الواتساب") }, leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), singleLine = true)
-                        OutlinedTextField(value = regMemorization, onValueChange = { regMemorization = it }, label = { Text("مقدار المحفوظ") }, leadingIcon = { Icon(Icons.Default.Book, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), singleLine = true)
-                        OutlinedTextField(value = regExperience, onValueChange = { regExperience = it }, label = { Text("الخبرة السابقة") }, leadingIcon = { Icon(Icons.Default.Work, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), maxLines = 2)
+                        OutlinedTextField(value = regCity, onValueChange = { regCity = it }, label = { Text("المدينة / مكان الإقامة", fontFamily = TajawalFontFamily) }, leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), singleLine = true)
+                        OutlinedTextField(value = regPhone, onValueChange = { regPhone = it }, label = { Text("وسيلة التواصل / الواتساب", fontFamily = TajawalFontFamily) }, leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), singleLine = true)
+                        OutlinedTextField(value = regMemorization, onValueChange = { regMemorization = it }, label = { Text("مقدار المحفوظ", fontFamily = TajawalFontFamily) }, leadingIcon = { Icon(Icons.Default.Book, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), singleLine = true)
+                        OutlinedTextField(value = regExperience, onValueChange = { regExperience = it }, label = { Text("الخبرة السابقة", fontFamily = TajawalFontFamily) }, leadingIcon = { Icon(Icons.Default.Work, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), maxLines = 2)
 
-                        Text("الفترة المناسبة للتسميع", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("الفترة المناسبة للتسميع", style = MaterialTheme.typography.labelLarge, fontFamily = TajawalFontFamily, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("الفجر", "الضحى", "العصر", "المغرب", "العشاء").forEach { option ->
                                 val isSelected = regSlot == option
                                 val bgColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface, label = "bg")
                                 val borderColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant, label = "border")
-                                Surface(modifier = Modifier.weight(1f).height(45.dp).clickable { regSlot = option }, shape = RoundedCornerShape(10.dp), color = bgColor, border = BorderStroke(1.dp, borderColor)) {
-                                    Box(contentAlignment = Alignment.Center) { Text(text = option, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface) }
+                                Surface(
+                                    modifier = Modifier.weight(1f).height(44.dp).clickable { regSlot = option },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = bgColor,
+                                    border = BorderStroke(1.dp, borderColor)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(text = option, fontSize = 12.sp, fontFamily = TajawalFontFamily, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface)
+                                    }
                                 }
                             }
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                     }
 
-                    // Confirm Button
+                    // Confirm Button with Gradient
                     Box(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                         Button(
                             onClick = {
@@ -498,12 +680,14 @@ fun HomeScreen(
                                     registrationErrorMessage = "تنبيه: أنت مسجل بالفعل أو لديك طلب قيد المراجعة في هذا البرنامج."
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(55.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp)
+                                .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp)),
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            Text("تأكيد إرسال الطلب", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("تأكيد إرسال الطلب", fontFamily = TajawalFontFamily, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
                     }
                 }
@@ -511,71 +695,237 @@ fun HomeScreen(
         }
     }
 
+    // --- DIALOG: Registration Success (Custom Luxury Dialog) ---
     if (registrationSuccessDialog) {
-        AlertDialog(
-            onDismissRequest = { registrationSuccessDialog = false },
-            title = { Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF18794E)); Spacer(modifier = Modifier.width(8.dp)); Text(text = "تم إرسال طلبك بنجاح", fontWeight = FontWeight.Bold) } },
-            text = { Text(text = "تم استلام طلب التسجيل وحالته الآن (قيد المراجعة). سيقوم المشرف المسؤول بمراجعته والتواصل معك وإرسال إشعار فوري إلى مركز الإشعارات بالاعتماد إن شاء الله.") },
-            confirmButton = { Button(onClick = { registrationSuccessDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF18794E)), shape = RoundedCornerShape(8.dp)) { Text(text = "حسناً") } }
-        )
+        Dialog(onDismissRequest = { registrationSuccessDialog = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.90f)
+                    .clip(RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Column {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(IslamicEmerald, IslamicEmeraldDark)
+                                )
+                            )
+                            .padding(20.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = IslamicGold, modifier = Modifier.size(28.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "تم استلام طلبك بنجاح",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontFamily = TajawalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.padding(22.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Text(
+                            text = "تم استلام استمارة التسجيل في حلقات المقرأة وحالتها الآن (قيد المراجعة والاعتماد).\n\nسيقوم المشرف المسؤول بمراجعة بياناتك والتواصل معك عبر الواتساب، وستصلك إشعارات فورية على شريط إشعارات الجوال بالاعتماد إن شاء الله.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = TajawalFontFamily,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        Button(
+                            onClick = { registrationSuccessDialog = false },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text("حسناً وبارك الله فيكم", fontFamily = TajawalFontFamily, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    // --- DIALOG: Notification Center ---
+    // --- DIALOG: Notification Center (Custom Luxury Dialog) ---
     if (showNotificationsDialog) {
-        AlertDialog(
+        Dialog(
             onDismissRequest = { showNotificationsDialog = false },
-            title = {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "مركز إشعارات المقرأة", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
-                    TextButton(onClick = { maqraahViewModel.markAllNotificationsAsRead() }) { Text(text = "قراءة الكل", style = MaterialTheme.typography.labelSmall) }
-                }
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Surface(color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(text = "إشعارات شريط الجوال (Notification Panel)", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                Text(text = "تصلك التنبيهات علوياً عند الحلقات والتسجيل", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .fillMaxHeight(0.80f)
+                    .clip(RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(IslamicEmerald, IslamicEmeraldDark)
+                                )
+                            )
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Notifications, contentDescription = null, tint = IslamicGold, modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "مركز إشعارات المقرأة",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontFamily = TajawalFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
                             }
-                            FilledTonalButton(onClick = { SmartNotificationManager.sendTestNotification(context); Toast.makeText(context, "تم إرسال إشعار فوري 🔔", Toast.LENGTH_SHORT).show() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
-                                Text("تجربة 🔔", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            TextButton(onClick = { maqraahViewModel.markAllNotificationsAsRead() }) {
+                                Text(text = "قراءة الكل", fontFamily = TajawalFontFamily, fontWeight = FontWeight.Bold, color = IslamicGold)
                             }
                         }
                     }
 
-                    if (notifications.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { Text(text = "لا توجد إشعارات مسجلة حالياً", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    } else {
-                        LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            items(notifications) { notif ->
-                                Card(
-                                    modifier = Modifier.fillMaxWidth().clickable { maqraahViewModel.markNotificationAsRead(notif.id) },
-                                    colors = CardDefaults.cardColors(containerColor = if (!notif.isRead) Color(0xFFDDF2E3) else MaterialTheme.colorScheme.surface),
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(18.dp)
+                    ) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "إشعارات شريط الجوال (Notification Panel)",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontFamily = TajawalFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "تصلك التنبيهات علوياً عند بدء البث والتسجيل",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontFamily = TajawalFontFamily,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                FilledTonalButton(
+                                    onClick = {
+                                        SmartNotificationManager.sendTestNotification(context)
+                                        Toast.makeText(context, "تم إرسال إشعار فوري 🔔", Toast.LENGTH_SHORT).show()
+                                    },
                                     shape = RoundedCornerShape(12.dp),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                            Text(text = notif.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (!notif.isRead) Color(0xFF105C3B) else MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                                            if (!notif.isRead) { Surface(color = Color(0xFF18794E), shape = CircleShape, modifier = Modifier.size(8.dp)) {} }
+                                    Text("تجربة 🔔", fontFamily = TajawalFontFamily, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        if (notifications.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize().padding(20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "لا توجد إشعارات مسجلة حالياً",
+                                    fontFamily = TajawalFontFamily,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                items(notifications) { notif ->
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { maqraahViewModel.markNotificationAsRead(notif.id) },
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (!notif.isRead) IslamicEmeraldContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surface
+                                        ),
+                                        shape = RoundedCornerShape(16.dp),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                        border = BorderStroke(1.dp, if (!notif.isRead) IslamicEmerald else SurfaceBorderDecor)
+                                    ) {
+                                        Column(modifier = Modifier.padding(14.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = notif.title,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontFamily = TajawalFontFamily,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (!notif.isRead) IslamicEmeraldDark else MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                if (!notif.isRead) {
+                                                    Surface(color = IslamicEmerald, shape = CircleShape, modifier = Modifier.size(8.dp)) {}
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = notif.message,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontFamily = TajawalFontFamily,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = notif.date,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontFamily = TajawalFontFamily,
+                                                color = MaterialTheme.colorScheme.outline
+                                            )
                                         }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(text = notif.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(text = notif.date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                                     }
                                 }
                             }
                         }
                     }
+
+                    // زر الإغلاق السفلي
+                    Box(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
+                        Button(
+                            onClick = { showNotificationsDialog = false },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text("إغلاق", fontFamily = TajawalFontFamily, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
-            },
-            confirmButton = { Button(onClick = { showNotificationsDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF18794E)), shape = RoundedCornerShape(8.dp)) { Text(text = "إغلاق") } }
-        )
+            }
+        }
     }
 }

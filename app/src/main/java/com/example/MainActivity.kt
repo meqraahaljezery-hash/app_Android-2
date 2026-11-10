@@ -4,7 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.*
 import com.example.ui.navigation.AppNavigation
+import com.example.ui.theme.AppThemeMode
+import com.example.ui.theme.LocalThemeMode
+import com.example.ui.theme.LocalThemeModeController
 import com.example.ui.theme.MyApplicationTheme
 import com.example.util.configureAppCheck
 
@@ -20,8 +24,15 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
-                AppNavigation()
+            var themeMode by remember { mutableStateOf(AppThemeMode.SYSTEM) }
+
+            MyApplicationTheme(themeMode = themeMode) {
+                CompositionLocalProvider(
+                    LocalThemeMode provides themeMode,
+                    LocalThemeModeController provides { themeMode = it }
+                ) {
+                    AppNavigation()
+                }
             }
         }
     }

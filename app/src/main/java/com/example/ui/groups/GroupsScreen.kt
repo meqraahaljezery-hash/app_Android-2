@@ -209,88 +209,126 @@ fun GroupsScreen(
         }
     }
 
-    // نافذة التفاصيل عند النقر على المجموعة
+    // نافذة التفاصيل الفاخرة عند النقر على المجموعة (Luxury Custom Dialog)
     if (activeGroupDialog != null) {
         val grp = activeGroupDialog!!
-        AlertDialog(
+        androidx.compose.ui.window.Dialog(
             onDismissRequest = { activeGroupDialog = null },
-            title = { 
-                Text(text = grp.nameAr, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge) 
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(text = "المعلم المشرف: ${grp.teacherName}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "المنهج والتلاوة: ${grp.currentSurah}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "عدد الطلاب المسجلين: ${grp.membersCount} طالب", style = MaterialTheme.typography.bodyMedium)
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    // زر دخول الحلقة (للدردشة والبث)
-                    Button(
-                        onClick = {
-                            activeGroupDialog = null
-                            onOpenGroupChat?.invoke(grp)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .clip(RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Column {
+                    // Header
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                    colors = listOf(com.example.ui.theme.IslamicEmerald, com.example.ui.theme.IslamicEmeraldDark)
+                                )
+                            )
+                            .padding(20.dp)
                     ) {
-                        Icon(Icons.Default.Forum, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("دخول الحلقة والدردشة", fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Groups, contentDescription = null, tint = com.example.ui.theme.IslamicGold, modifier = Modifier.size(26.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = grp.nameAr,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontFamily = com.example.ui.theme.TajawalFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                            IconButton(onClick = { activeGroupDialog = null }) {
+                                Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.White)
+                            }
+                        }
                     }
 
-                    // زر التليغرام (إن وجد)
-                    if (!grp.telegramLink.isNullOrBlank()) {
-                        Button(
-                            onClick = {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(grp.telegramLink))
-                                    context.startActivity(intent)
-                                } catch (_: Exception) {}
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = TelegramBlue),
-                            shape = RoundedCornerShape(8.dp),
+                    // Content
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("الانضمام لمجموعة تليغرام")
+                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(text = "المعلم المشرف: ${grp.teacherName}", fontFamily = com.example.ui.theme.TajawalFontFamily, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Text(text = "المنهج والتلاوة: ${grp.currentSurah}", fontFamily = com.example.ui.theme.TajawalFontFamily, style = MaterialTheme.typography.bodyMedium)
+                                Text(text = "الطلاب المسجلون: ${grp.membersCount} طالب", fontFamily = com.example.ui.theme.TajawalFontFamily, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                    } else {
-                        Text(
-                            text = "رابط تليغرام الرسمي سيقوم المشرف العام بتفعيله وإضافته يدوياً قريباً.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+
+                        // زر دخول الحلقة (للدردشة وبث LiveKit)
+                        Button(
+                            onClick = {
+                                activeGroupDialog = null
+                                onOpenGroupChat?.invoke(grp)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                        ) {
+                            Icon(Icons.Default.Forum, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("دخول الحلقة ومجلس التسميع 🎙️", fontFamily = com.example.ui.theme.TajawalFontFamily, fontWeight = FontWeight.Bold)
+                        }
+
+                        // زر التليغرام (إن وجد)
+                        if (!grp.telegramLink.isNullOrBlank()) {
+                            Button(
+                                onClick = {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(grp.telegramLink))
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {}
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = TelegramBlue),
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                            ) {
+                                Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("الانضمام لمجموعة تليغرام الرسمية", fontFamily = com.example.ui.theme.TajawalFontFamily, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        // زر التنبيه الفوري على شريط الجوال
+                        OutlinedButton(
+                            onClick = {
+                                com.example.util.SmartNotificationManager.notifyHalaqahLive(
+                                    context,
+                                    grp.nameAr,
+                                    grp.teacherName
+                                )
+                                Toast.makeText(context, "تم إرسال تذكير الحلقة لشريط التنبيهات 🔔", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("تنبيهي على لوحة الإشعارات 🔔", fontFamily = com.example.ui.theme.TajawalFontFamily, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        }
                     }
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    // زر التنبيه
-                    OutlinedButton(
-                        onClick = {
-                            com.example.util.SmartNotificationManager.notifyHalaqahLive(
-                                context,
-                                grp.nameAr,
-                                grp.teacherName
-                            )
-                            Toast.makeText(context, "تم إرسال تذكير الحلقة لشريط التنبيهات 🔔", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("تنبيهي على لوحة الإشعارات 🔔", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { activeGroupDialog = null }) {
-                    Text(text = "إغلاق", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        )
+        }
     }
 }

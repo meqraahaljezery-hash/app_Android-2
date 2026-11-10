@@ -57,26 +57,38 @@ object LiveKitManager {
     private val coroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     /**
-     * استرجاع عنوان خادم LiveKit المعد في الإعدادات
+     * استرجاع عنوان خادم LiveKit السحابي المعتمد للمقرأة
      */
     fun getServerUrl(): String {
         return try {
             val url = BuildConfig::class.java.getField("LIVEKIT_URL").get(null) as? String
-            if (!url.isNullOrBlank() && url != "null") url else "wss://livekit.aljazari.org"
+            if (!url.isNullOrBlank() && url != "null") url else "wss://aljezery-android-2-r1lq8vsc.livekit.cloud"
         } catch (_: Exception) {
-            "wss://livekit.aljazari.org"
+            "wss://aljezery-android-2-r1lq8vsc.livekit.cloud"
         }
     }
 
     /**
-     * استرجاع مفتاح LiveKit API Key
+     * استرجاع مفتاح LiveKit API Key المعتمد للمقرأة
      */
     fun getApiKey(): String {
         return try {
             val key = BuildConfig::class.java.getField("LIVEKIT_API_KEY").get(null) as? String
-            if (!key.isNullOrBlank() && key != "null") key else "livekit-jazari-key"
+            if (!key.isNullOrBlank() && key != "null") key else "APIhhAJ6XyCQUaH"
         } catch (_: Exception) {
-            "livekit-jazari-key"
+            "APIhhAJ6XyCQUaH"
+        }
+    }
+
+    /**
+     * استرجاع الرمز السري المعتمد LiveKit API Secret
+     */
+    fun getApiSecret(): String {
+        return try {
+            val secret = BuildConfig::class.java.getField("LIVEKIT_API_SECRET").get(null) as? String
+            if (!secret.isNullOrBlank() && secret != "null") secret else "RZANInRliibg1lfX3VanV8jhd0LbknvARLJFZNZWpFS"
+        } catch (_: Exception) {
+            "RZANInRliibg1lfX3VanV8jhd0LbknvARLJFZNZWpFS"
         }
     }
 

@@ -21,10 +21,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.BorderStroke
 import com.example.data.model.User
 import com.example.data.model.UserRole
 import com.example.i18n.AppLanguage
 import com.example.i18n.Strings
+import com.example.ui.theme.AppThemeMode
+import com.example.ui.theme.LocalThemeMode
+import com.example.ui.theme.LocalThemeModeController
+import com.example.ui.theme.TajawalFontFamily
+import com.example.ui.theme.IslamicGold
+import com.example.ui.theme.SurfaceBorderDecor
 import com.example.util.SmartNotificationManager
 import com.example.viewmodel.MaqraahViewModel
 
@@ -290,6 +298,99 @@ fun ProfileScreen(
                                 Text(text = "لغة التطبيق / Language", style = MaterialTheme.typography.bodyMedium)
                             }
                             Text(text = currentLanguage.displayName, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        }
+
+                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                        // Dynamic Theme & Night Viewing Hub (المظهر الليلي وتدرجات ألوان القراءة والتهجد)
+                        val currentThemeMode = LocalThemeMode.current
+                        val themeController = LocalThemeModeController.current
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                                    RoundedCornerShape(14.dp)
+                                )
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = when (currentThemeMode) {
+                                        AppThemeMode.NIGHT -> Icons.Default.DarkMode
+                                        AppThemeMode.LIGHT -> Icons.Default.LightMode
+                                        AppThemeMode.DYNAMIC -> Icons.Default.ColorLens
+                                        AppThemeMode.SYSTEM -> Icons.Default.BrightnessAuto
+                                    },
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "المظهر وتدرجات القراءة الليلية (Night Viewing)",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontFamily = TajawalFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "تدرجات أسطح مخصصة للتهجد والقراءة الليلية دون إجهاد العين",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontFamily = TajawalFontFamily,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(
+                                    AppThemeMode.SYSTEM to "تلقائي",
+                                    AppThemeMode.LIGHT to "نهاري",
+                                    AppThemeMode.NIGHT to "ليلي 🌙",
+                                    AppThemeMode.DYNAMIC to "تكيفي 🎨"
+                                ).forEach { (mode, label) ->
+                                    val isSelected = currentThemeMode == mode
+                                    Surface(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable {
+                                                themeController(mode)
+                                                val msg = when (mode) {
+                                                    AppThemeMode.NIGHT -> "تم تفعيل الوضع الليلي والتهجد وتدرجات الأسطح المعتمة"
+                                                    AppThemeMode.LIGHT -> "تم تفعيل الوضع النهاري الفاخر"
+                                                    AppThemeMode.DYNAMIC -> "تم تفعيل الألوان التكيفية الديناميكية لنظام أندرويد"
+                                                    AppThemeMode.SYSTEM -> "تم تفعيل المظهر التلقائي حسب نظام الجهاز"
+                                                }
+                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                            },
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(vertical = 8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                fontFamily = TajawalFontFamily,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
